@@ -1,0 +1,3927 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AVIR GT-S · נהיגה</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0d14; --panel:rgba(12,15,22,.70); --line:rgba(255,255,255,.10);
+    --txt:#eef1f7; --dim:#98a0b4;
+    --a1:#ff2d6f; --a2:#7b5cff; --a3:#00d4ff; --ok:#28e0a0;
+  }
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"SF Hebrew","Segoe UI",Rubik,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+  /* ---------- loader ---------- */
+  #loader{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:16px;
+    background:radial-gradient(circle at 50% 42%,#151a26 0%,#070910 70%);z-index:60;transition:opacity .6s}
+  #loader.gone{opacity:0;pointer-events:none}
+  #loader h1{font-size:clamp(26px,6vw,44px);letter-spacing:.22em;font-weight:800;
+    background:linear-gradient(92deg,var(--a1),var(--a2) 55%,var(--a3));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #bar{width:min(280px,62vw);height:3px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden}
+  #bar i{display:block;height:100%;width:38%;border-radius:3px;
+    background:linear-gradient(90deg,var(--a1),var(--a3));animation:sl 1.15s ease-in-out infinite}
+  @keyframes sl{0%{transform:translateX(-120%)}100%{transform:translateX(360%)}}
+  #lmsg{color:var(--dim);font-size:13px;letter-spacing:.04em}
+  #err{position:fixed;inset:0;display:none;place-content:center;text-align:center;padding:26px;
+    background:#0a0c12;color:#ffb4c2;font-size:15px;line-height:1.7;z-index:70}
+
+  /* ---------- HUD ---------- */
+  .hud{position:fixed;z-index:20;pointer-events:none;user-select:none}
+  #dial{left:22px;bottom:20px;width:190px;height:190px}
+  #dial svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 10px 26px rgba(0,0,0,.5))}
+  #kmh{position:absolute;inset:0;display:grid;place-content:center;text-align:center;transform:translateY(6px)}
+  #kmh b{display:block;font-size:44px;font-weight:800;letter-spacing:-.02em;line-height:1;
+    font-variant-numeric:tabular-nums}
+  #kmh span{font-size:11px;color:var(--dim);letter-spacing:.24em}
+  #gear{position:absolute;left:50%;top:-6px;transform:translateX(-50%);
+    font-size:15px;font-weight:800;color:var(--a3);letter-spacing:.1em}
+
+  #panelR{right:22px;top:22px;width:184px;display:grid;gap:10px}
+  #freeCard{display:none}
+  body.city #freeCard{display:block}
+  body.city #lapCard{display:none}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:11px 13px;
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .card h4{font-size:10px;letter-spacing:.2em;color:var(--dim);font-weight:600;margin-bottom:6px}
+  .big{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .sub{font-size:11px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
+  #best{color:var(--ok)}
+  #map{display:block;width:158px;height:158px}
+  #warn{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:25;
+    font-size:19px;font-weight:800;letter-spacing:.06em;color:#ffd166;opacity:0;transition:opacity .2s;
+    text-shadow:0 3px 18px rgba(0,0,0,.6)}
+  #warn.on{opacity:1}
+  #prompt{position:fixed;left:50%;bottom:9%;transform:translateX(-50%);z-index:25;
+    padding:8px 16px;border-radius:12px;background:rgba(12,15,22,.62);
+    border:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    font-size:14px;font-weight:700;color:var(--txt);opacity:0;transition:opacity .2s;
+    pointer-events:none;white-space:nowrap}
+  #prompt.on{opacity:1}
+  body.touch #prompt{bottom:24%}
+  #flash{position:fixed;left:50%;top:26%;transform:translateX(-50%);z-index:25;text-align:center;
+    font-size:15px;color:var(--txt);opacity:0;transition:opacity .35s;text-shadow:0 3px 14px rgba(0,0,0,.7)}
+  #flash.on{opacity:1}
+  #flash b{display:block;font-size:30px;font-weight:800;letter-spacing:.02em;
+    background:linear-gradient(92deg,var(--a1),var(--a3));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* ---------- buttons ---------- */
+  #tools{position:fixed;left:22px;top:22px;z-index:30;display:flex;gap:8px;flex-wrap:wrap;max-width:44vw}
+  .btn{pointer-events:auto;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;
+    font-size:12.5px;font-weight:600;color:var(--txt);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);transition:.16s;white-space:nowrap}
+  .btn:hover{background:rgba(28,32,44,.86);transform:translateY(-1px)}
+  .btn.on{background:linear-gradient(92deg,var(--a1),var(--a2));border-color:transparent}
+  .btn svg{width:15px;height:15px;opacity:.9}
+
+  /* ---------- help ---------- */
+  #help{position:fixed;inset:0;z-index:50;display:none;place-content:center;
+    background:rgba(5,7,12,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #help.on{display:grid}
+  #help .box{width:min(520px,90vw);background:var(--panel);border:1px solid var(--line);
+    border-radius:22px;padding:24px 26px}
+  #help h2{font-size:20px;margin-bottom:4px;letter-spacing:.02em}
+  #help p{color:var(--dim);font-size:13px;margin-bottom:16px}
+  #help table{width:100%;border-collapse:collapse;font-size:13.5px}
+  #help td{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.06)}
+  #help td:first-child{color:var(--dim);width:44%}
+  kbd{display:inline-block;min-width:22px;text-align:center;background:rgba(255,255,255,.09);
+    border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 6px;
+    font:600 12px/1.5 ui-monospace,Menlo,monospace;margin-inline-end:3px}
+  #help .close{margin-top:18px;text-align:center}
+
+  /* ---------- touch ---------- */
+  #pad{position:fixed;inset:auto 0 0 0;height:150px;z-index:22;display:none;
+    justify-content:space-between;align-items:flex-end;padding:0 18px 18px;pointer-events:none}
+  #pad .k{pointer-events:auto;width:76px;height:76px;border-radius:24px;display:grid;place-content:center;
+    background:var(--panel);border:1px solid var(--line);font-size:22px;font-weight:800;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);user-select:none}
+  #pad .k:active,#pad .k.on{background:linear-gradient(92deg,var(--a1),var(--a2))}
+  #pad .grp{display:flex;gap:12px;pointer-events:none}
+  #pad .stack{flex-direction:column-reverse;align-items:flex-end;gap:10px}
+  #pad .row{display:flex;gap:12px}
+  #pad .k.tap{width:56px;height:56px;border-radius:18px;font-size:17px}
+  body.touch #pad{display:flex}
+  body.touch #dial{transform:scale(.8);transform-origin:left bottom}
+  @media(max-width:760px){
+    #panelR{width:150px;right:12px;top:12px}
+    #map{width:124px;height:124px}
+    #tools{max-width:60vw;left:12px;top:12px}
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="tools">
+  <div class="btn" data-a="help">? עזרה</div>
+  <div class="btn" data-a="foot"><span id="flbl">לצאת מהרכב</span></div>
+  <div class="btn" data-a="cam">מצלמה</div>
+  <div class="btn" data-a="world">עולם · <span id="wlbl">עיר</span></div>
+  <div class="btn" data-a="auto">טייס אוטומטי</div>
+  <div class="btn on" data-a="assist">עזרי נהיגה</div>
+  <div class="btn" data-a="night">לילה</div>
+  <div class="btn" data-a="sound">סאונד</div>
+  <div class="btn" data-a="qual">איכות · <span id="qlbl">גבוהה</span></div>
+  <div class="btn" data-a="home">🏠 הביתה</div>
+  <div class="btn" data-a="reset">איפוס</div>
+  <a class="btn" href="index.html" style="text-decoration:none">← לסטודיו</a>
+</div>
+
+<div class="hud" id="dial">
+  <div id="gear">N</div>
+  <svg viewBox="0 0 200 200">
+    <path id="arcBg" d="" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="9" stroke-linecap="round"/>
+    <path id="arcFg" d="" fill="none" stroke="url(#gr)" stroke-width="9" stroke-linecap="round"/>
+    <path id="arcRev" d="" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3.5" stroke-linecap="round"/>
+    <path id="arcRevF" d="" fill="none" stroke="#ff3b30" stroke-width="3.5" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="gr" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#00d4ff"/><stop offset=".55" stop-color="#7b5cff"/>
+        <stop offset="1" stop-color="#ff2d6f"/>
+      </linearGradient>
+    </defs>
+    <g id="ticks"></g>
+  </svg>
+  <div id="kmh"><b>0</b><span>קמ״ש</span></div>
+</div>
+
+<div class="hud" id="panelR">
+  <div class="card" id="lapCard">
+    <h4>הקפה נוכחית</h4>
+    <div class="big" id="cur">0:00.00</div>
+    <div class="sub">שיא: <span id="best">—</span></div>
+    <div class="sub" id="laps">הקפה 1</div>
+  </div>
+  <div class="card" id="freeCard">
+    <h4>נסיעה חופשית</h4>
+    <div class="big" id="fkm">0.00 ק״מ</div>
+    <div class="sub">מהירות שיא: <span id="ftop">0</span> קמ״ש</div>
+    <div class="sub" id="ftime">0:00</div>
+    <div class="sub" id="mood">העיר: —</div>
+    <div class="sub" id="dmg">מצב הרכב: תקין</div>
+  </div>
+  <div class="card" style="padding:9px">
+    <canvas id="map" width="316" height="316"></canvas>
+    <div class="sub" id="fps" style="text-align:center;margin-top:5px">— FPS</div>
+  </div>
+</div>
+
+<div id="warn">כיוון נסיעה הפוך</div>
+<div id="prompt"></div>
+<div id="flash"><b id="flashB"></b><span id="flashS"></span></div>
+
+<div id="pad">
+  <div class="grp"><div class="k" data-k="left">‹</div><div class="k" data-k="right">›</div></div>
+  <div class="grp stack">
+    <div class="row"><div class="k" data-k="brake">⌄</div><div class="k" data-k="gas">⌃</div></div>
+    <div class="k tap" data-k="foot">⇱</div>
+  </div>
+</div>
+
+<div id="help">
+  <div class="box">
+    <h2>AVIR GT-S · מצב נהיגה</h2>
+    <p>שני עולמות: <b>עיר</b> לנסיעה חופשית (רחובות, רמזורים, פארקים) ו<b>מסלול מרוצים</b>
+       סגור עם מדידת הקפות. הרכב הוא אותו מודל מהסטודיו.</p>
+    <table>
+      <tr><td>גז / בלם־נסיעה לאחור</td><td><kbd>W</kbd><kbd>S</kbd> או <kbd>↑</kbd><kbd>↓</kbd></td></tr>
+      <tr><td>היגוי</td><td><kbd>A</kbd><kbd>D</kbd> או <kbd>←</kbd><kbd>→</kbd></td></tr>
+      <tr><td>בלם יד (סחרור)</td><td><kbd>רווח</kbd></td></tr>
+      <tr><td>מעבר עיר / מסלול</td><td><kbd>T</kbd></td></tr>
+      <tr><td>לצאת מהרכב / לחזור אליו</td><td><kbd>F</kbd></td></tr>
+      <tr><td>בהליכה: קדימה · פנייה · ריצה</td><td><kbd>W</kbd><kbd>A</kbd><kbd>D</kbd><kbd>רווח</kbd></td></tr>
+      <tr><td>טייס אוטומטי (בעיר)</td><td><kbd>G</kbd></td></tr>
+      <tr><td>עזרי נהיגה (יציבות)</td><td><kbd>E</kbd></td></tr>
+      <tr><td>החלפת מצלמה</td><td><kbd>C</kbd> · <kbd>1</kbd>–<kbd>4</kbd></td></tr>
+      <tr><td>אורות / לילה</td><td><kbd>L</kbd> · <kbd>N</kbd></td></tr>
+      <tr><td>סאונד</td><td><kbd>M</kbd></td></tr>
+      <tr><td>חזרה לכביש</td><td><kbd>R</kbd></td></tr>
+      <tr><td>איכות גרפיקה</td><td><kbd>Q</kbd></td></tr>
+      <tr><td>עזרה</td><td><kbd>H</kbd></td></tr>
+    </table>
+    <div class="close"><span class="btn" data-a="help">יאללה, לנהוג</span></div>
+  </div>
+</div>
+
+<div id="loader">
+  <h1>AVIR GT</h1>
+  <div id="bar"><i></i></div>
+  <div id="lmsg">בונה את המסלול…</div>
+</div>
+<div id="err"></div>
+
+<script src="vendor/three.min.js"></script>
+<script>
+if(!window.THREE){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"><\/scr'+'ipt>');}
+</script>
+<script src="car-model.js"></script>
+<script>
+/* =========================================================================
+   AVIR GT-S — driving simulator.
+   The car itself comes from car-model.js; everything here is world + vehicle.
+   ========================================================================= */
+(function(){
+'use strict';
+var E=document.getElementById('err');
+function fatal(m){E.style.display='grid';E.innerHTML=m;var l=document.getElementById('loader');if(l)l.className='gone';}
+if(!window.THREE){fatal('לא הצלחתי לטעון את three.js.<br>ודא ש־<b>vendor/three.min.js</b> נמצא ליד הקובץ.');return;}
+if(!window.AVIR){fatal('חסר הקובץ <b>car-model.js</b> ליד הדף.');return;}
+window.addEventListener('error',function(ev){fatal('שגיאה: '+(ev.message||'')+'<br><small>'+(ev.filename||'')+':'+(ev.lineno||'')+'</small>');});
+
+var A=window.AVIR, T=THREE, PI=Math.PI, TAU=PI*2;
+var clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp;
+var cvs=A.util.cvs, tex=A.util.tex, mesh=A.util.mesh, roundedBox=A.util.roundedBox;
+var CAR=A.CAR, MAT=A.MAT, LIGHTS=A.LIGHTS;
+function clampAbs(v,m){return v>m?m:(v<-m?-m:v);}
+var lmsg=document.getElementById('lmsg');
+
+/* =================================================================
+   RENDERER / SCENE / SKY
+   ================================================================= */
+var canvas=document.getElementById('c');
+var renderer=new T.WebGLRenderer({canvas:canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight,false);
+if('outputColorSpace' in renderer&&T.SRGBColorSpace)renderer.outputColorSpace=T.SRGBColorSpace;
+else renderer.outputEncoding=T.sRGBEncoding;
+renderer.toneMapping=T.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.02;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=T.PCFSoftShadowMap;
+
+var scene=new T.Scene();
+var camera=new T.PerspectiveCamera(62,innerWidth/innerHeight,0.22,3000);
+
+var SKY={
+  day  :{top:'#2c68c0',mid:'#8ec0e9',low:'#dfe9f0',fog:0xc3d6e6,fogN:170,fogF:1950},
+  night:{top:'#03050e',mid:'#0a1226',low:'#16203a',fog:0x0a0f1e,fogN:45,fogF:430}
+};
+function skyTexture(p){
+  var c=cvs(64,512),x=c.getContext('2d');
+  var g=x.createLinearGradient(0,0,0,512);
+  g.addColorStop(0,p.top);g.addColorStop(0.44,p.mid);g.addColorStop(0.58,p.low);g.addColorStop(1,p.low);
+  x.fillStyle=g;x.fillRect(0,0,64,512);
+  return tex(c,1,1,true);
+}
+var SKYT={day:skyTexture(SKY.day),night:skyTexture(SKY.night)};
+var skyMat=new T.MeshBasicMaterial({map:SKYT.day,side:T.BackSide,depthWrite:false,fog:false});
+var skyDome=new T.Mesh(new T.SphereGeometry(2400,32,20),skyMat);
+skyDome.frustumCulled=false;scene.add(skyDome);
+/* real points, not pixels painted on the gradient - those stretch into comets */
+var STARS=(function(){
+  var n=900,pos=new Float32Array(n*3),sz=new Float32Array(n),i;
+  for(i=0;i<n;i++){
+    var a=Math.random()*TAU,h=Math.pow(Math.random(),0.7)*0.92;
+    var r=Math.sqrt(1-h*h)*1400;
+    pos[i*3]=Math.cos(a)*r;pos[i*3+1]=h*1400+40;pos[i*3+2]=Math.sin(a)*r;
+    sz[i]=1.1+Math.random()*2.4;
+  }
+  var g=new T.BufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(pos,3));
+  g.setAttribute('aSize',new T.BufferAttribute(sz,1));
+  var m=new T.ShaderMaterial({transparent:true,depthWrite:false,fog:false,
+    uniforms:{uPix:{value:renderer.getPixelRatio()}},
+    vertexShader:'attribute float aSize;uniform float uPix;varying float vS;'+
+      'void main(){vS=aSize;gl_PointSize=aSize*uPix;'+
+      'gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:'varying float vS;void main(){'+
+      'vec2 d=gl_PointCoord-0.5;if(dot(d,d)>0.25)discard;'+
+      'gl_FragColor=vec4(1.0,1.0,0.96,0.30+vS*0.16);}'});
+  var pts=new T.Points(g,m);pts.frustumCulled=false;pts.visible=false;scene.add(pts);
+  return pts;
+})();
+scene.fog=new T.Fog(SKY.day.fog,SKY.day.fogN,SKY.day.fogF);
+
+/* environment map: sky above, ground below, so the paint reflects a world */
+function envScene(night){
+  var s=new T.Scene();
+  s.add(new T.Mesh(new T.SphereGeometry(60,24,16),
+    new T.MeshBasicMaterial({map:night?SKYT.night:SKYT.day,side:T.BackSide})));
+  var gp=new T.Mesh(new T.CircleGeometry(58,32),
+    new T.MeshBasicMaterial({color:night?0x090d16:0x4d5642}));
+  gp.rotation.x=-PI/2;gp.position.y=-2.2;s.add(gp);
+  if(!night){
+    var sn=new T.Mesh(new T.CircleGeometry(10,20),new T.MeshBasicMaterial({color:0xfff6e6}));
+    sn.position.set(-24,30,-32);sn.lookAt(0,0,0);s.add(sn);
+  }
+  return s;
+}
+var pmrem=new T.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+var ENV_DAY=pmrem.fromScene(envScene(false),0.04).texture;
+var ENV_NIGHT=pmrem.fromScene(envScene(true),0.05).texture;
+scene.environment=ENV_DAY;
+A.makeMaterials(ENV_DAY);
+
+var sun=new T.DirectionalLight(0xfff1dd,2.55);
+sun.position.set(-60,90,-40);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=30;sun.shadow.camera.far=250;
+sun.shadow.camera.left=-32;sun.shadow.camera.right=32;
+sun.shadow.camera.top=32;sun.shadow.camera.bottom=-32;
+sun.shadow.bias=-0.0008;sun.shadow.normalBias=0.028;sun.shadow.radius=2.0;
+scene.add(sun);scene.add(sun.target);
+var hemi=new T.HemisphereLight(0xbcd8ff,0x4c4a3a,0.74);scene.add(hemi);
+var bounce=new T.DirectionalLight(0xdce8ff,0.32);bounce.position.set(40,20,50);scene.add(bounce);
+var cabin=new T.PointLight(0xc8d8f4,1.4,3.6,2.0);cabin.position.set(0,1.05,-0.1);
+
+/* =================================================================
+   TRACK — radius modulated around a centre, so r(a) is single valued
+   and the circuit can never cross itself.
+   ================================================================= */
+var TRACK,world=new T.Group();scene.add(world);
+function buildTrack(){
+  var HALF=6.4;
+  function radius(a){
+    return 236+56*Math.sin(3*a+0.35)+26*Math.cos(5*a+1.15)+13*Math.sin(7*a+2.2);
+  }
+  var ctrl=[],K=26,i;
+  for(i=0;i<K;i++){
+    var a=i/K*TAU,r=radius(a);
+    ctrl.push(new T.Vector3(Math.cos(a)*r*1.16,0,Math.sin(a)*r));
+  }
+  var curve=new T.CatmullRomCurve3(ctrl,true,'catmullrom',0.5);
+  var N=1000,pts=curve.getSpacedPoints(N),tan=[],nrm=[],cum=[0],total=0;
+  for(i=0;i<=N;i++){
+    var p0=pts[(i-1+N)%N],p1=pts[(i+1)%N];
+    var t=new T.Vector3().subVectors(p1,p0).setY(0).normalize();
+    tan.push(t);
+    nrm.push(new T.Vector3(t.z,0,-t.x));      /* +n = left of travel */
+    if(i>0){total+=pts[i].distanceTo(pts[i-1]);cum.push(total);}
+  }
+  TRACK={HALF:HALF,pts:pts,tan:tan,nrm:nrm,cum:cum,len:total,N:N};
+}
+
+/* a strip offset from the centreline; the v repeat is snapped to a whole
+   number of tiles so the texture meets itself at the start/finish join */
+function ribbon(inner,outer,y,every,mat,i0,i1){
+  var N=TRACK.N,pos=[],uv=[],idx=[],i;
+  var a0=(i0===undefined)?0:i0, a1=(i1===undefined)?N:i1;
+  var span=TRACK.cum[a1]-TRACK.cum[a0];
+  var reps=Math.max(1,Math.round(span/every));
+  for(i=a0;i<=a1;i++){
+    var p=TRACK.pts[i],n=TRACK.nrm[i];
+    var v=(TRACK.cum[i]-TRACK.cum[a0])/span*reps;
+    pos.push(p.x+n.x*inner,y,p.z+n.z*inner);
+    pos.push(p.x+n.x*outer,y,p.z+n.z*outer);
+    uv.push(0,v, 1,v);
+  }
+  /* wound so the face normal points up - the other way round the whole road is backfacing */
+  for(i=0;i<a1-a0;i++){var b=i*2;idx.push(b,b+2,b+1, b+1,b+2,b+3);}
+  var g=new T.BufferGeometry();
+  g.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);g.computeVertexNormals();
+  var m=new T.Mesh(g,mat);m.receiveShadow=true;m.castShadow=false;
+  return m;
+}
+
+/* ---- surface textures ---- */
+function asphaltTexture(){
+  var c=cvs(512,512),x=c.getContext('2d'),i,n;
+  x.fillStyle='#3a3d43';x.fillRect(0,0,512,512);
+  for(i=0;i<26000;i++){
+    n=Math.random();
+    x.fillStyle='rgba('+(26+n*95|0)+','+(28+n*95|0)+','+(33+n*98|0)+','+(0.10+n*0.30).toFixed(2)+')';
+    x.fillRect(Math.random()*512,Math.random()*512,1+n*2,1+n*2);
+  }
+  for(i=0;i<70;i++){
+    x.strokeStyle='rgba(19,20,24,'+(0.05+Math.random()*0.12).toFixed(2)+')';
+    x.lineWidth=1+Math.random()*7;
+    x.beginPath();x.moveTo(Math.random()*512,Math.random()*512);
+    x.bezierCurveTo(Math.random()*512,Math.random()*512,Math.random()*512,Math.random()*512,
+                    Math.random()*512,Math.random()*512);
+    x.stroke();
+  }
+  x.fillStyle='#e9edf0';                       /* u runs across the road */
+  x.fillRect(9,0,12,512);x.fillRect(491,0,12,512);
+  x.fillStyle='rgba(233,237,240,.92)';
+  for(i=0;i<512;i+=128)x.fillRect(251,i,10,76);
+  return c;
+}
+function kerbTexture(){
+  var c=cvs(64,64),x=c.getContext('2d');
+  x.fillStyle='#dfe3e8';x.fillRect(0,0,64,64);
+  x.fillStyle='#cc2233';x.fillRect(0,0,64,32);
+  return c;
+}
+function grassTexture(){
+  var c=cvs(512,512),x=c.getContext('2d'),i,n;
+  x.fillStyle='#5b6a3c';x.fillRect(0,0,512,512);
+  for(i=0;i<16000;i++){
+    n=Math.random();
+    x.fillStyle='rgba('+(58+n*72|0)+','+(76+n*80|0)+','+(38+n*48|0)+','+(0.16+n*0.4).toFixed(2)+')';
+    x.fillRect(Math.random()*512,Math.random()*512,2+n*4,2+n*4);
+  }
+  for(i=0;i<340;i++){
+    x.fillStyle='rgba(152,144,88,'+(0.05+Math.random()*0.16).toFixed(2)+')';
+    x.beginPath();x.arc(Math.random()*512,Math.random()*512,4+Math.random()*22,0,TAU);x.fill();
+  }
+  return c;
+}
+function dirtTexture(){
+  var c=cvs(256,256),x=c.getContext('2d'),i,n;
+  x.fillStyle='#8b7b5f';x.fillRect(0,0,256,256);
+  for(i=0;i<9000;i++){
+    n=Math.random();
+    x.fillStyle='rgba('+(122+n*70|0)+','+(106+n*62|0)+','+(80+n*52|0)+','+(0.18+n*0.4).toFixed(2)+')';
+    x.fillRect(Math.random()*256,Math.random()*256,1+n*3,1+n*3);
+  }
+  return c;
+}
+
+function buildRoad(){
+  var grassMat=(new T.MeshStandardMaterial({map:tex(grassTexture(),150,150),roughness:0.97,
+    envMap:ENV_DAY,envMapIntensity:0.35}));
+  var ground=new T.Mesh(new T.PlaneGeometry(4600,4600),grassMat);
+  ground.rotation.x=-PI/2;ground.position.y=-0.035;ground.receiveShadow=true;scene.add(ground);
+
+  var roadT=tex(asphaltTexture(),1,1);roadT.anisotropy=16;
+  var roadMat=(new T.MeshStandardMaterial({map:roadT,roughness:0.83,metalness:0.02,
+    envMap:ENV_DAY,envMapIntensity:0.30}));
+  world.add(ribbon(-TRACK.HALF,TRACK.HALF,0.02,13,roadMat));
+
+  var dirtMat=(new T.MeshStandardMaterial({map:tex(dirtTexture(),46,1),roughness:0.98,
+    envMap:ENV_DAY,envMapIntensity:0.2}));
+  world.add(ribbon(TRACK.HALF+0.58,TRACK.HALF+5.4,0.006,26,dirtMat));
+  world.add(ribbon(-TRACK.HALF-5.4,-TRACK.HALF-0.58,0.006,26,dirtMat));
+
+  var kerbMat=(new T.MeshStandardMaterial({map:tex(kerbTexture(),1,1),roughness:0.55,
+    envMap:ENV_DAY,envMapIntensity:0.35}));
+  world.add(ribbon(TRACK.HALF,TRACK.HALF+0.62,0.032,3.0,kerbMat));
+  world.add(ribbon(-TRACK.HALF-0.62,-TRACK.HALF,0.032,3.0,kerbMat));
+
+  /* start / finish: a short strip of the road itself, so it can't be crooked */
+  var c=cvs(256,64),x=c.getContext('2d'),r,q;
+  x.fillStyle='#eef1f4';x.fillRect(0,0,256,64);
+  x.fillStyle='#14161b';
+  for(r=0;r<4;r++)for(q=0;q<16;q++)if((r+q)%2)x.fillRect(q*16,r*16,16,16);
+  var lineMat=(new T.MeshStandardMaterial({map:tex(c,1,1),roughness:0.72,
+    envMap:ENV_DAY,envMapIntensity:0.2,polygonOffset:true,polygonOffsetFactor:-3}));
+  world.add(ribbon(-TRACK.HALF,TRACK.HALF,0.028,3.4,lineMat,0,3));
+}
+
+/* =================================================================
+   ROADSIDE
+   ================================================================= */
+var lampBulbMat;
+function lampPost(){
+  var g=new T.Group();
+  var post=(new T.MeshStandardMaterial({color:0x70757d,roughness:0.5,metalness:0.75,
+    envMap:ENV_DAY,envMapIntensity:0.7}));
+  var dark=(new T.MeshStandardMaterial({color:0x2a2e36,roughness:0.55,metalness:0.6,
+    envMap:ENV_DAY,envMapIntensity:0.6}));
+  if(!lampBulbMat)lampBulbMat=new T.MeshStandardMaterial({color:0x8d9299,roughness:0.35,
+    emissive:0x000000,emissiveIntensity:1});
+  var p=mesh(new T.CylinderGeometry(0.10,0.15,7.4,10),post,true,false);p.position.y=3.7;g.add(p);
+  var arm=mesh(new T.CylinderGeometry(0.075,0.075,1.9,8),post,true,false);
+  arm.rotation.z=PI/2-0.30;arm.position.set(0.85,7.20,0);g.add(arm);
+  var head=mesh(roundedBox(1.05,0.20,0.42,0.09,6),dark,true,false);
+  head.position.set(1.62,7.02,0);g.add(head);
+  var bulb=new T.Mesh(new T.PlaneGeometry(0.86,0.32),lampBulbMat);
+  bulb.rotation.x=PI/2;bulb.position.set(1.62,6.89,0);g.add(bulb);
+  var base=mesh(new T.CylinderGeometry(0.28,0.34,0.5,10),dark,true,false);
+  base.position.y=0.24;g.add(base);
+  return g;
+}
+function treeMesh(kind){
+  var g=new T.Group();
+  var trunkM=(new T.MeshStandardMaterial({color:kind?0x5b4630:0x6b543a,roughness:0.95,
+    envMap:ENV_DAY,envMapIntensity:0.2}));
+  var leafM=(new T.MeshStandardMaterial({color:kind?0x2f5128:0x3d6130,roughness:0.94,
+    flatShading:true,envMap:ENV_DAY,envMapIntensity:0.25}));
+  var tr=mesh(new T.CylinderGeometry(0.16,0.30,kind?3.0:2.2,7),trunkM,true,true);
+  tr.position.y=kind?1.5:1.1;g.add(tr);
+  if(kind){
+    [[0,4.4,2.6],[0.5,6.2,1.9],[-0.3,7.6,1.2]].forEach(function(q){
+      var b=mesh(new T.ConeGeometry(q[2],3.0,9),leafM,true,false);
+      b.position.set(q[0],q[1],0);g.add(b);
+    });
+  }else{
+    [[0,3.3,2.3],[1.1,4.1,1.6],[-1.0,4.0,1.5],[0.2,5.0,1.5]].forEach(function(q){
+      var b=mesh(new T.IcosahedronGeometry(q[2],0),leafM,true,false);
+      b.position.set(q[0],q[1],(q[0]*0.7));g.add(b);
+    });
+  }
+  return g;
+}
+/* one InstancedMesh per sub-mesh keeps hundreds of props at a few draw calls.
+   Returns a handle for the ones that are not props: rewrite a single
+   instance's root transform and every sub-mesh of that figure follows. */
+function instancePack(proto,transforms,opt){
+  opt=opt||{};
+  var parts=[],packs=[],i;
+  if(!transforms.length)return null;
+  proto.updateMatrixWorld(true);
+  proto.traverse(function(o){if(o.isMesh)parts.push(o);});
+  parts.forEach(function(o){
+    var im=new T.InstancedMesh(o.geometry,o.material,transforms.length);
+    im.castShadow=(opt.cast===false)?false:o.castShadow;
+    im.receiveShadow=o.receiveShadow;
+    var m=new T.Matrix4();
+    for(i=0;i<transforms.length;i++){
+      m.copy(transforms[i]).multiply(o.matrixWorld);
+      im.setMatrixAt(i,m);
+    }
+    im.instanceMatrix.needsUpdate=true;
+    im.frustumCulled=false;
+    /* opt.tint is either one array for everything flagged, or a set of
+       arrays keyed by the flag - which is what lets one instance carry a
+       body colour and a shirt colour that are not the same colour */
+    var col=null;
+    if(opt.tint&&o.userData.tint){
+      col=Array.isArray(opt.tint)?opt.tint:opt.tint[o.userData.tint];
+      if(col){
+        for(i=0;i<transforms.length;i++)im.setColorAt(i,col[i]);
+        im.instanceColor.needsUpdate=true;
+      }
+    }
+    packs.push({im:im,local:o.matrixWorld.clone(),slot:o.userData.slot,col:col});
+    (opt.to||world).add(im);
+  });
+  var _pm=new T.Matrix4(),_cur=0;
+  return {
+    count:transforms.length,
+    /* Culling by scaling an instance to nothing does not save the GPU any
+       work: three.js submits every instance up to `count` whatever size it
+       is, so the vertex shader still runs on all of them. The only thing
+       that helps is packing the ones you want to the front of the buffer
+       and shortening `count` - which is what begin/push/end do. */
+    begin:function(){_cur=0;},
+    push:function(root,sw,src){
+      for(var k=0;k<packs.length;k++){
+        var q=packs[k];
+        if(sw&&q.slot!==undefined)_pm.multiplyMatrices(root,sw[q.slot]).multiply(q.local);
+        else _pm.multiplyMatrices(root,q.local);
+        q.im.setMatrixAt(_cur,_pm);
+        if(q.col)q.im.setColorAt(_cur,q.col[src]);
+      }
+      _cur++;
+    },
+    end:function(){
+      for(var k=0;k<packs.length;k++){
+        packs[k].im.count=_cur;
+        packs[k].im.instanceMatrix.needsUpdate=true;
+        if(packs[k].im.instanceColor)packs[k].im.instanceColor.needsUpdate=true;
+      }
+    },
+    /* sw, when given, is one matrix per limb slot: the parts tagged with a
+       slot get root * swing * local, everything else rides the root alone.
+       That is what lets one instance per person still swing its legs. */
+    set:function(i,root,sw){
+      for(var k=0;k<packs.length;k++){
+        var q=packs[k];
+        if(sw&&q.slot!==undefined)_pm.multiplyMatrices(root,sw[q.slot]).multiply(q.local);
+        else _pm.multiplyMatrices(root,q.local);
+        q.im.setMatrixAt(i,_pm);
+      }
+    },
+    flush:function(){
+      for(var k=0;k<packs.length;k++)packs[k].im.instanceMatrix.needsUpdate=true;
+    }
+  };
+}
+function buildProps(){
+  var lampX=[],treeA=[],treeB=[],rockX=[],i;
+  var rnd=(function(){var s=20260903;return function(){s=(s*1664525+1013904223)&0x7fffffff;return s/0x7fffffff;};})();
+  var STEP=6;
+  for(i=0;i<TRACK.N;i+=STEP){
+    var p=TRACK.pts[i],n=TRACK.nrm[i],t=TRACK.tan[i];
+    var head=Math.atan2(t.x,t.z);          /* local +Z -> tangent, local +X -> +n */
+    if(i%(STEP*8)===0){
+      var s=((i/(STEP*8))%2)?1:-1;
+      /* the arm points inward: +X faces +n, so flip the post on the +n side */
+      var mm=new T.Matrix4().makeRotationY(head+(s>0?PI:0));
+      mm.setPosition(p.x+n.x*s*(TRACK.HALF+6.6),0,p.z+n.z*s*(TRACK.HALF+6.6));
+      lampX.push(mm);
+    }
+    for(var k=0;k<3;k++){
+      var side=rnd()<0.5?1:-1;
+      var off=TRACK.HALF+10+rnd()*46;
+      var jit=(rnd()-0.5)*10;
+      var mt=new T.Matrix4().makeRotationY(rnd()*TAU);
+      var sc=0.75+rnd()*0.8;
+      mt.scale(new T.Vector3(sc,sc,sc));
+      mt.setPosition(p.x+n.x*side*off+t.x*jit,0,p.z+n.z*side*off+t.z*jit);
+      if(rnd()<0.22)rockX.push(mt);
+      else if(rnd()<0.5)treeA.push(mt);else treeB.push(mt);
+    }
+  }
+  instancePack(lampPost(),lampX);
+  instancePack(treeMesh(0),treeA);
+  instancePack(treeMesh(1),treeB);
+  var rock=new T.Group();
+  var rm=mesh(new T.IcosahedronGeometry(0.9,0),
+    (new T.MeshStandardMaterial({color:0x7d7b74,roughness:0.95,flatShading:true,
+      envMap:ENV_DAY,envMapIntensity:0.25})),true,true);
+  rm.position.y=0.32;rm.scale.set(1,0.6,1.2);rock.add(rm);
+  instancePack(rock,rockX);
+}
+function buildGantry(){
+  var p=TRACK.pts[0],t=TRACK.tan[0];
+  var g=new T.Group(),W=TRACK.HALF+1.3;
+  var steel=(new T.MeshStandardMaterial({color:0x9aa0a8,roughness:0.42,metalness:0.85,
+    envMap:ENV_DAY,envMapIntensity:0.8}));
+  [-1,1].forEach(function(s){
+    var col=mesh(new T.CylinderGeometry(0.26,0.34,8.4,12),steel,true,false);
+    col.position.set(s*W,4.2,0);g.add(col);
+  });
+  var beam=mesh(new T.BoxGeometry(W*2,0.55,0.7),steel,true,false);
+  beam.position.y=8.2;g.add(beam);
+  var c=cvs(1024,128),x=c.getContext('2d');
+  var gr=x.createLinearGradient(0,0,1024,0);
+  gr.addColorStop(0,'#ff2d6f');gr.addColorStop(0.5,'#7b5cff');gr.addColorStop(1,'#00d4ff');
+  x.fillStyle='#0d1017';x.fillRect(0,0,1024,128);
+  x.fillStyle=gr;x.fillRect(0,112,1024,16);x.fillRect(0,0,1024,5);
+  x.fillStyle='#eef1f7';x.font='bold 70px -apple-system,Arial';x.textAlign='center';
+  x.fillText('A V I R   G T - S',512,82);
+  var ban=new T.Mesh(new T.PlaneGeometry(W*2,1.5),
+    (new T.MeshStandardMaterial({map:tex(c,1,1),roughness:0.7,side:T.DoubleSide,
+      envMap:ENV_DAY,envMapIntensity:0.3})));
+  ban.position.y=7.2;ban.rotation.y=PI;   /* face the oncoming car, or the text reads mirrored */
+  g.add(ban);
+  g.position.set(p.x,0,p.z);
+  g.rotation.y=Math.atan2(t.x,t.z);      /* +X across the road, +Z down the straight */
+  world.add(g);
+}
+/* The ridge on the horizon, and the two things it kept getting wrong.
+   It has to start beyond everything you can drive on - the far CORNER of the
+   city grid is ext*sqrt(2), further out than any edge, and the four roads
+   leaving town reach further again - or the town grows into the mountains and
+   you drive through one. The ring is derived from that, so it moves when the
+   city does instead of sitting at a number that was right once.
+   And it is drawn double-sided: a single-sided cone has no inside, so from
+   within one you look straight out through the far wall and it reads as a
+   hollow shell. Double-sided plus a foot you cannot drive past fixes both. */
+var HILLS=[];
+function buildHills(){
+  var m=new T.MeshStandardMaterial({color:0x6d8090,roughness:1,flatShading:true,
+    side:T.DoubleSide,envMap:ENV_DAY,envMapIntensity:0.4});
+  var g=new T.Group(),i;
+  var clear=Math.max(CITY.ext*Math.SQRT2,CITY.out)+90;   /* nothing drivable past here */
+  for(i=0;i<54;i++){
+    var a=i/54*TAU+0.1;
+    if(Math.cos(a)<-0.42)continue;             /* that side is the sea */
+    var r=120+Math.sin(i*3.3)*55;
+    var d=clear+r+90+Math.sin(i*2.1)*90;   /* nearest face never inside `clear` */
+    var h=110+Math.abs(Math.sin(i*1.7))*190;
+    var c=mesh(new T.ConeGeometry(r,h,6),m,false,false);
+    c.position.set(Math.cos(a)*d,h/2-14,Math.sin(a)*d);
+    c.rotation.y=i;g.add(c);
+    /* a six-sided cone is flat-to-flat at cos30 of its circumradius */
+    HILLS.push({x:c.position.x,z:c.position.z,r:r*0.866});
+  }
+  scene.add(g);
+}
+
+/* =================================================================
+   CITY — a grid district for free driving: avenues, blocks, towers,
+   houses, parks. Everything that can be merged is merged, so the
+   whole town costs a few dozen draw calls.
+   ================================================================= */
+var cityG=new T.Group();cityG.visible=false;scene.add(cityG);
+var CITY={P:86,RH:8.6,SW:4.6,N:8,lit:[],solid:{},cars:{},parks:[],plans:{},posts:[]};
+CITY.ext=CITY.N*CITY.P;              /* junctions sit on multiples of P      */
+CITY.SIG=CITY.N-1;                   /* junctions with a signal head on them */
+CITY.PARK=5.5;                       /* beyond this the kerb strip is parking  */
+CITY.BAY=(CITY.PARK+CITY.RH)/2;      /* where a parked car sits, from the axis */
+CITY.out=CITY.ext+250;               /* the four roads that leave town       */
+CITY.pad=CITY.P/2-CITY.RH;           /* half a block incl. its pavement      */
+CITY.zone=CITY.pad-CITY.SW;          /* half the buildable part of a block   */
+function seeded(s){return function(){s=(s*1664525+1013904223)&0x7fffffff;return s/0x7fffffff;};}
+
+/* ---- geometry accumulator: raw quads in, one BufferGeometry out ---- */
+function GEO(){return {P:[],N:[],U:[],I:[],n:0};}
+function gQuad(G,a,b,c,d,nx,ny,nz,uv){
+  var v=[a,b,c,d],k=G.n,i;
+  for(i=0;i<4;i++){G.P.push(v[i][0],v[i][1],v[i][2]);G.N.push(nx,ny,nz);}
+  for(i=0;i<8;i++)G.U.push(uv[i]);
+  G.I.push(k,k+1,k+2,k,k+2,k+3);G.n+=4;
+}
+/* normal from the winding, for anything that is not axis aligned */
+function gFace(G,pts,uv){
+  var ax=pts[1][0]-pts[0][0],ay=pts[1][1]-pts[0][1],az=pts[1][2]-pts[0][2];
+  var bx=pts[2][0]-pts[1][0],by=pts[2][1]-pts[1][1],bz=pts[2][2]-pts[1][2];
+  var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;
+  var l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;nx/=l;ny/=l;nz/=l;
+  var k=G.n,i;
+  for(i=0;i<pts.length;i++){G.P.push(pts[i][0],pts[i][1],pts[i][2]);G.N.push(nx,ny,nz);}
+  for(i=0;i<uv.length;i++)G.U.push(uv[i]);
+  if(pts.length===4)G.I.push(k,k+1,k+2,k,k+2,k+3);else G.I.push(k,k+1,k+2);
+  G.n+=pts.length;
+}
+/* a wall from a to b; outward normal is to the left of a->b */
+function gWall(G,ax,az,bx,bz,y0,y1,us,vs){
+  var dx=bx-ax,dz=bz-az,len=Math.sqrt(dx*dx+dz*dz);
+  if(len<1e-4)return;
+  var u1=len/us,v1=(y1-y0)/vs;
+  gQuad(G,[ax,y0,az],[bx,y0,bz],[bx,y1,bz],[ax,y1,az],-dz/len,0,dx/len,
+        [0,0, u1,0, u1,v1, 0,v1]);
+}
+function gBox(G,x,z,hx,hz,y0,y1,us,vs){
+  gWall(G,x+hx,z+hz,x+hx,z-hz,y0,y1,us,vs);
+  gWall(G,x+hx,z-hz,x-hx,z-hz,y0,y1,us,vs);
+  gWall(G,x-hx,z-hz,x-hx,z+hz,y0,y1,us,vs);
+  gWall(G,x-hx,z+hz,x+hx,z+hz,y0,y1,us,vs);
+}
+/* a horizontal face, uv taken from world x/z so neighbours line up */
+function gTop(G,x,z,hx,hz,y,us,off){
+  var o=off||0;
+  var a=(x-hx)/us+o,b=(x+hx)/us+o,c=(z+hz)/us+o,d=(z-hz)/us+o;
+  gQuad(G,[x-hx,y,z+hz],[x+hx,y,z+hz],[x+hx,y,z-hz],[x-hx,y,z-hz],0,1,0,
+        [a,c, b,c, b,d, a,d]);
+}
+function gBake(G,mat,cast,recv,to){
+  if(!G.n)return null;
+  var g=new T.BufferGeometry();
+  g.setAttribute('position',new T.Float32BufferAttribute(G.P,3));
+  g.setAttribute('normal',new T.Float32BufferAttribute(G.N,3));
+  g.setAttribute('uv',new T.Float32BufferAttribute(G.U,2));
+  g.setIndex(G.I);g.computeBoundingSphere();
+  var m=new T.Mesh(g,mat);m.castShadow=!!cast;m.receiveShadow=recv!==false;
+  (to||cityG).add(m);return m;
+}
+
+/* ---- surfaces ---------------------------------------------------- */
+/* one tile = one junction: the cross of roads, its zebras and stop
+   lines. Everything outside the road bands ends up under a block. */
+function cityRoadTexture(){
+  var S=1024,c=cvs(S,S),g=c.getContext('2d'),i,n;
+  g.fillStyle='#3b3e44';g.fillRect(0,0,S,S);
+  for(i=0;i<22000;i++){
+    n=Math.random();
+    g.fillStyle='rgba('+(30+n*96|0)+','+(32+n*96|0)+','+(38+n*99|0)+','+(0.10+n*0.26).toFixed(2)+')';
+    g.fillRect(Math.random()*S,Math.random()*S,1+n*2.5,1+n*2.5);
+  }
+  for(i=0;i<44;i++){
+    g.strokeStyle='rgba(22,23,27,'+(0.05+Math.random()*0.13).toFixed(2)+')';
+    g.lineWidth=1+Math.random()*6;
+    g.beginPath();g.moveTo(Math.random()*S,Math.random()*S);
+    g.bezierCurveTo(Math.random()*S,Math.random()*S,Math.random()*S,Math.random()*S,
+                    Math.random()*S,Math.random()*S);
+    g.stroke();
+  }
+  g.save();
+  g.setTransform(S/CITY.P,0,0,-S/CITY.P,S/2,S/2);  /* metres, +z downstream */
+  var RH=CITY.RH,PK=CITY.PARK,END=CITY.P/2,k,z;
+  function arm(){                                  /* one of the four approaches */
+    g.fillStyle='rgba(238,242,246,.90)';
+    g.fillRect(RH,-0.30,END-RH,0.13);              /* double centre line */
+    g.fillRect(RH,0.17,END-RH,0.13);
+    /* the kerb-side strip is a parking lane, not a traffic lane: solid line
+       to close the carriageway off, and bays ticked along it. The cars that
+       stand there used to sit on the outer lane, which is exactly where the
+       traffic wanted to be. */
+    g.fillRect(RH,-PK-0.07,END-RH,0.14);
+    g.fillRect(RH, PK-0.07,END-RH,0.14);
+    for(k=1;k<=6;k++){                             /* bay markings */
+      var xb=RH+(END-RH)*k/6.4;
+      g.fillRect(xb-0.06,-RH+0.1,0.12,RH-PK-0.1);
+      g.fillRect(xb-0.06, PK,0.12,RH-PK-0.1);
+    }
+    for(k=2;k<=6;k++){                             /* the lane divider, dashed */
+      var xk=k*(CITY.P/12);
+      g.fillRect(xk-1.7,-3.1-0.065,3.4,0.13);
+      g.fillRect(xk-1.7, 3.1-0.065,3.4,0.13);
+    }
+    for(z=-RH+0.45;z<RH-0.6;z+=1.15)g.fillRect(RH+0.7,z,2.9,0.60);   /* zebra */
+    g.fillRect(RH+4.4,-PK+0.1,0.42,PK-0.1);        /* stop line, right-hand lanes */
+  }
+  for(i=0;i<4;i++){arm();g.rotate(PI/2);}
+  g.restore();
+  return c;
+}
+function pavingTexture(){
+  var S=512,c=cvs(S,S),g=c.getContext('2d'),i,n,p;
+  g.fillStyle='#9b9b95';g.fillRect(0,0,S,S);
+  for(i=0;i<9000;i++){
+    n=Math.random();
+    g.fillStyle='rgba('+(118+n*92|0)+','+(118+n*92|0)+','+(112+n*90|0)+','+(0.12+n*0.30).toFixed(2)+')';
+    g.fillRect(Math.random()*S,Math.random()*S,1+n*3,1+n*3);
+  }
+  g.strokeStyle='rgba(72,72,68,.5)';g.lineWidth=2.5;
+  for(i=0;i<=4;i++){
+    p=i*S/4;g.beginPath();g.moveTo(p,0);g.lineTo(p,S);g.moveTo(0,p);g.lineTo(S,p);g.stroke();
+  }
+  return c;
+}
+function concreteTexture(col){
+  var S=256,c=cvs(S,S),g=c.getContext('2d'),i,n;
+  g.fillStyle=col;g.fillRect(0,0,S,S);
+  for(i=0;i<5000;i++){
+    n=Math.random();
+    g.fillStyle='rgba('+(90+n*110|0)+','+(90+n*108|0)+','+(88+n*106|0)+','+(0.10+n*0.26).toFixed(2)+')';
+    g.fillRect(Math.random()*S,Math.random()*S,1+n*3,1+n*3);
+  }
+  return c;
+}
+/* window rect inside one 3.2 m bay, as fractions of the bay */
+var BAY=[[0.08,0.12,0.84,0.64],[0.27,0.17,0.46,0.58],[0.10,0.26,0.80,0.40]];
+function facadeTexture(kind){
+  var S=1024,c=cvs(S,S),g=c.getContext('2d'),i,j,n,W=S/8,b=BAY[kind];
+  g.fillStyle=kind===0?'#59636f':kind===1?'#8a7862':'#a6a69f';
+  g.fillRect(0,0,S,S);
+  for(i=0;i<9000;i++){                       /* surface grain */
+    n=Math.random();
+    g.fillStyle='rgba(255,255,255,'+(n*0.05).toFixed(3)+')';
+    g.fillRect(Math.random()*S,Math.random()*S,2+n*4,2+n*4);
+  }
+  if(kind===1){                              /* brick courses */
+    g.strokeStyle='rgba(60,48,38,.20)';g.lineWidth=1.5;
+    for(j=0;j<64;j++){g.beginPath();g.moveTo(0,j*S/64);g.lineTo(S,j*S/64);g.stroke();}
+  }
+  for(j=0;j<8;j++)for(i=0;i<8;i++){
+    var x0=i*W,y0=j*W;
+    if(kind===2){g.fillStyle='rgba(126,126,120,.85)';g.fillRect(x0,y0+W*0.72,W,W*0.28);}
+    if(kind===0){g.fillStyle='rgba(40,48,58,.55)';g.fillRect(x0,y0+W*0.80,W,W*0.20);}
+    var wx=x0+b[0]*W,wy=y0+b[1]*W,ww=b[2]*W,wh=b[3]*W;
+    var gr=g.createLinearGradient(wx,wy,wx+ww*0.4,wy+wh);
+    if(kind===0){gr.addColorStop(0,'#2a3f4c');gr.addColorStop(0.5,'#16242f');gr.addColorStop(1,'#33505f');}
+    else{gr.addColorStop(0,'#1d2530');gr.addColorStop(0.6,'#141a22');gr.addColorStop(1,'#2b3644');}
+    g.fillStyle=gr;g.fillRect(wx,wy,ww,wh);
+    g.strokeStyle=kind===1?'rgba(226,222,212,.55)':'rgba(150,158,168,.45)';
+    g.lineWidth=2.5;g.strokeRect(wx,wy,ww,wh);
+    if(kind===1){g.fillStyle='rgba(228,224,214,.55)';g.fillRect(wx-3,wy+wh,ww+6,4);}
+    g.fillStyle='rgba(255,255,255,.10)';g.fillRect(wx+ww*0.06,wy+wh*0.06,ww*0.30,wh*0.86);
+  }
+  for(i=0;i<26;i++){                          /* weather streaks */
+    var sx=Math.random()*S,sw=3+Math.random()*10;
+    g.fillStyle='rgba(30,30,32,'+(0.02+Math.random()*0.05).toFixed(3)+')';
+    g.fillRect(sx,Math.random()*S*0.5,sw,S*0.5);
+  }
+  return c;
+}
+function litTexture(kind,seed){
+  var S=512,c=cvs(S,S),g=c.getContext('2d'),i,j,W=S/8,b=BAY[kind],rnd=seeded(seed),t;
+  g.fillStyle='#000';g.fillRect(0,0,S,S);
+  for(j=0;j<8;j++)for(i=0;i<8;i++){
+    if(rnd()>0.42)continue;
+    t=rnd();
+    g.fillStyle=t<0.62?'rgba(255,206,142,'+(0.55+t*0.45).toFixed(2)+')':
+               (t<0.86?'rgba(196,218,255,.70)':'rgba(255,170,110,.60)');
+    g.fillRect(i*W+b[0]*W,j*W+b[1]*W,b[2]*W,b[3]*W);
+  }
+  return c;
+}
+/* ground floor band, tile = 8 m x 4.2 m */
+function storeTexture(lit){
+  var W=512,H=256,c=cvs(W,H),g=c.getContext('2d'),i,rnd=seeded(4711),t;
+  var awn=['#c8434f','#2f7d8c','#c8873a','#4c7a3c'];
+  g.fillStyle=lit?'#000':'#2b2e34';g.fillRect(0,0,W,H);
+  for(i=0;i<4;i++){
+    var x0=i*128;
+    if(lit){
+      t=rnd();
+      g.fillStyle=t<0.75?'rgba(255,226,178,.85)':'rgba(150,200,255,.55)';
+      g.fillRect(x0+12,60,104,150);
+      g.fillStyle='rgba(255,120,60,.75)';g.fillRect(x0+18,28,92,18);
+    }else{
+      g.fillStyle='#11151c';g.fillRect(x0+12,60,104,150);          /* shop glass */
+      g.fillStyle='rgba(120,150,180,.16)';g.fillRect(x0+18,66,40,140);
+      g.fillStyle=awn[i%4];g.fillRect(x0+8,40,112,22);             /* awning */
+      g.fillStyle='rgba(0,0,0,.35)';g.fillRect(x0+8,58,112,5);
+      g.fillStyle='#0b0e13';g.fillRect(x0+56,120,44,90);           /* doorway */
+      g.fillStyle='#3a3f48';g.fillRect(x0,0,128,26);               /* sign band */
+      g.fillStyle='rgba(220,228,240,.65)';g.fillRect(x0+20,10,60+((i*23)%40),7);
+      g.fillStyle='#4a5058';g.fillRect(x0+2,60,10,152);            /* pier */
+    }
+  }
+  if(!lit){g.fillStyle='#5a6068';g.fillRect(0,212,W,44);}          /* plinth */
+  return c;
+}
+/* a house wall, tile = 8 m x 8 m, two storeys */
+function houseTexture(lit){
+  var S=512,c=cvs(S,S),g=c.getContext('2d'),i,j,rnd=seeded(9137),t;
+  if(lit){
+    g.fillStyle='#000';g.fillRect(0,0,S,S);
+    for(j=0;j<2;j++)for(i=0;i<2;i++){
+      if(rnd()>0.5)continue;
+      t=rnd();
+      g.fillStyle='rgba(255,208,150,'+(0.5+t*0.45).toFixed(2)+')';
+      g.fillRect(70+i*220,60+j*230,118,128);
+    }
+    return c;
+  }
+  g.fillStyle='#c9c0ae';g.fillRect(0,0,S,S);
+  for(i=0;i<7000;i++){
+    t=Math.random();
+    g.fillStyle='rgba('+(150+t*90|0)+','+(142+t*88|0)+','+(126+t*84|0)+','+(0.10+t*0.28).toFixed(2)+')';
+    g.fillRect(Math.random()*S,Math.random()*S,2+t*4,2+t*4);
+  }
+  for(j=0;j<2;j++)for(i=0;i<2;i++){
+    var x0=70+i*220,y0=60+j*230;
+    g.fillStyle='#f2efe6';g.fillRect(x0-8,y0-8,134,144);
+    g.fillStyle='#1b232c';g.fillRect(x0,y0,118,128);
+    g.strokeStyle='#f2efe6';g.lineWidth=7;
+    g.beginPath();g.moveTo(x0+59,y0);g.lineTo(x0+59,y0+128);
+    g.moveTo(x0,y0+64);g.lineTo(x0+118,y0+64);g.stroke();
+  }
+  g.fillStyle='#6b4a30';g.fillRect(300,300,86,190);                /* door */
+  g.fillStyle='#d8d2c4';g.fillRect(292,292,102,10);
+  return c;
+}
+function tileRoofTexture(){
+  var S=256,c=cvs(S,S),g=c.getContext('2d'),i,j;
+  g.fillStyle='#8c4a33';g.fillRect(0,0,S,S);
+  for(j=0;j<8;j++)for(i=0;i<16;i++){
+    g.fillStyle='rgba('+(120+((i*37+j*13)%40)|0)+',66,44,.55)';
+    g.fillRect(i*16+(j%2?8:0),j*32,15,30);
+  }
+  g.strokeStyle='rgba(60,28,18,.5)';g.lineWidth=2;
+  for(j=0;j<=8;j++){g.beginPath();g.moveTo(0,j*32);g.lineTo(S,j*32);g.stroke();}
+  return c;
+}
+
+var CMAT={};
+function cityMaterials(){
+  function std(map,rough,extra){
+    var o={map:tex(map,1,1),roughness:rough,metalness:0.02,
+           envMap:ENV_DAY,envMapIntensity:0.28};
+    if(extra)for(var k in extra)o[k]=extra[k];
+    return new T.MeshStandardMaterial(o);
+  }
+  function withLight(map,litMap){
+    var m=std(map,0.84,{emissive:0xffffff,emissiveMap:tex(litMap,1,1),emissiveIntensity:0});
+    CITY.lit.push(m);return m;
+  }
+  var rt=tex(cityRoadTexture(),1,1);rt.anisotropy=16;
+  CMAT.road=new T.MeshStandardMaterial({map:rt,roughness:0.86,metalness:0.02,
+    envMap:ENV_DAY,envMapIntensity:0.26});
+  var pv=tex(pavingTexture(),1,1);pv.anisotropy=8;
+  CMAT.pave=new T.MeshStandardMaterial({map:pv,roughness:0.92,envMap:ENV_DAY,envMapIntensity:0.22});
+  CMAT.curb=new T.MeshStandardMaterial({map:tex(concreteTexture('#b7b5ad'),1,1),roughness:0.9,
+    envMap:ENV_DAY,envMapIntensity:0.2});
+  CMAT.roof=new T.MeshStandardMaterial({map:tex(concreteTexture('#6a6a66'),1,1),roughness:0.95,
+    envMap:ENV_DAY,envMapIntensity:0.2});
+  CMAT.face=[withLight(facadeTexture(0),litTexture(0,7717)),
+             withLight(facadeTexture(1),litTexture(1,3391)),
+             withLight(facadeTexture(2),litTexture(2,5023))];
+  CMAT.store=withLight(storeTexture(false),storeTexture(true));
+  CMAT.house=withLight(houseTexture(false),houseTexture(true));
+  CMAT.tile=new T.MeshStandardMaterial({map:tex(tileRoofTexture(),1,1),roughness:0.88,
+    envMap:ENV_DAY,envMapIntensity:0.25});
+  CMAT.grass=new T.MeshStandardMaterial({map:tex(grassTexture(),1,1),roughness:0.97,
+    envMap:ENV_DAY,envMapIntensity:0.3});
+  CMAT.sand=new T.MeshStandardMaterial({map:tex(concreteTexture('#d9cba4'),1,1),
+    roughness:0.98,envMap:ENV_DAY,envMapIntensity:0.18});
+  /* a mirror-smooth sea just returns the sky and reads as a white void;
+     roughen it and pull the reflection back until it reads as water */
+  CMAT.sea=new T.MeshStandardMaterial({color:0x17475f,roughness:0.24,metalness:0.30,
+    envMap:ENV_DAY,envMapIntensity:0.70});
+  CMAT.water=new T.MeshStandardMaterial({color:0x2f6f92,roughness:0.12,metalness:0.5,
+    envMap:ENV_DAY,envMapIntensity:1.1});
+}
+
+/* ---- props ------------------------------------------------------- */
+
+/* ---- the traffic's own car ------------------------------------------
+   Lofted off the very same body surface as the car you are driving, at a
+   fraction of the resolution: recognisably the same machine from across
+   a junction, for about a hundredth of the triangles. Two levels, because
+   there are 166 cars moving and roughly 1500 parked, and the parked ones
+   are scenery - they get the silhouette and the wheels and nothing else.
+
+   The driver is a head and shoulders. That is all you ever see of one
+   through a windscreen, and a whole articulated figure per car would cost
+   more than the car it sits in. */
+function npcCar(kind){
+  var g=new T.Group(),S=A.surf,bs=A.util.buildSurface,C=A.CAR;
+  var drive=(kind==='drive');
+  var paint=new T.MeshStandardMaterial({color:0xffffff,roughness:0.33,metalness:0.44,
+    envMap:ENV_DAY,envMapIntensity:0.9});
+  var uSeg=drive?30:24,vSeg=drive?24:19;
+  var shell=mesh(bs(S.bodySurf,uSeg,vSeg,{closedV:true}),paint,true,false);
+  shell.userData.tint='body';g.add(shell);
+
+  /* The loft wraps in v but not in u, so on its own it is a tube open at
+     both ends - which is exactly what made these read as unfinished. The
+     real car closes them with the same trick: take the end section, shrink
+     it to a point along a cosine and bulge it forward. Same shape, same
+     seam, at the resolution the rest of this car is built to. */
+  [true,false].forEach(function(front){
+    var uE=front?1:0,dir=front?1:-1,bulge=front?0.085:0.070,z=S.zAt(uE);
+    var cy=(S.bodySurf(uE,0).y+S.bodySurf(uE,0.5).y)/2;
+    var cap=mesh(bs(function(u,v){
+      var q=S.bodySurf(uE,front?-v:v),c=Math.cos(clamp(u,0,1)*PI/2);
+      return new T.Vector3(q.x*c,cy+(q.y-cy)*c,z+dir*bulge*Math.sin(clamp(u,0,1)*PI/2));
+    },drive?9:6,vSeg,{closedV:true}),paint,true,false);
+    cap.userData.tint='body';g.add(cap);
+  });
+
+  var tyre=new T.MeshStandardMaterial({color:0x14161a,roughness:0.92});
+  var rim=new T.MeshStandardMaterial({color:0x2a2d33,roughness:0.4,metalness:0.8,
+    envMap:ENV_DAY,envMapIntensity:0.7});
+  [[C.trF,C.rF,C.axF],[-C.trF,C.rF,C.axF],
+   [C.trR,C.rR,C.axR],[-C.trR,C.rR,C.axR]].forEach(function(q){
+    var w=mesh(new T.CylinderGeometry(q[1],q[1],0.235,drive?12:8),tyre,false,false);
+    w.rotation.z=PI/2;w.position.set(q[0],q[1],q[2]);g.add(w);
+    var d=mesh(new T.CylinderGeometry(q[1]*0.62,q[1]*0.62,0.24,drive?10:7),rim,false,false);
+    d.rotation.z=PI/2;d.position.set(q[0]*0.995,q[1],q[2]);g.add(d);
+  });
+
+  /* the greenhouse, off the same canopy surface the real one uses. Parked
+     cars need it as much as moving ones: the body loft is a closed section
+     that dips into the cabin, so without a roof over it a car reads as a
+     scooped-out hull rather than a car. */
+  var glass=mesh(bs(function(a,b){return S.ghSurf(a,b);},drive?26:18,drive?18:13),
+    new T.MeshStandardMaterial({color:0x10161d,roughness:0.16,metalness:0.55,
+      envMap:ENV_DAY,envMapIntensity:1.1}),false,false);
+  g.add(glass);
+
+  /* and the painted roof over the middle of it, the way the real one is
+     built - without it the whole canopy is glass and the car looks like a
+     bubble rather than a coupe */
+  var roof=mesh(bs(function(a,b){
+    var u=0.215+0.520*a,f=S.ghVf(u,0.86);
+    return S.ghSurf(u,f+(1-2*f)*b);
+  },drive?16:11,drive?10:7),paint,true,false);
+  roof.userData.tint='body';g.add(roof);
+  if(!drive)return g;
+
+  /* and somebody driving it */
+  var skinM=new T.MeshStandardMaterial({color:0xc98d6a,roughness:0.72});
+  var shirtM=new T.MeshStandardMaterial({color:0xffffff,roughness:0.84});
+  var torso=mesh(roundedBox(0.36,0.42,0.25,0.09,5),shirtM,false,false);
+  torso.position.set(0.335,0.90,-0.30);torso.userData.tint='shirt';g.add(torso);
+  var head=mesh(new T.SphereGeometry(0.115,10,8),skinM,false,false);
+  head.position.set(0.335,1.20,-0.33);g.add(head);
+  [-1,1].forEach(function(sx){
+    var arm=mesh(roundedBox(0.085,0.085,0.34,0.038,4),shirtM,false,false);
+    arm.position.set(0.335+sx*0.14,0.94,-0.11);arm.rotation.x=-0.30;
+    arm.userData.tint='shirt';g.add(arm);
+  });
+  return g;
+}
+
+/* ---- a motorbike, and whoever is on it ---------------------------
+   Same lanes, same lights, same queue as everything else - it is only
+   the body that is different, and a rider who leans with it. */
+function npcBike(){
+  var g=new T.Group();
+  var body=new T.MeshStandardMaterial({color:0xffffff,roughness:0.30,metalness:0.55,
+    envMap:ENV_DAY,envMapIntensity:0.95});
+  var dark=new T.MeshStandardMaterial({color:0x15171c,roughness:0.72});
+  var skinM=new T.MeshStandardMaterial({color:0xc98d6a,roughness:0.72});
+  var suit=new T.MeshStandardMaterial({color:0xffffff,roughness:0.55,metalness:0.1});
+  var chrome=new T.MeshStandardMaterial({color:0x9aa2ad,roughness:0.28,metalness:0.9,
+    envMap:ENV_DAY,envMapIntensity:1.0});
+  [[0.62,0.31],[-0.66,0.31]].forEach(function(q){
+    var w=mesh(new T.CylinderGeometry(q[1],q[1],0.16,12),dark,true,false);
+    w.rotation.z=PI/2;w.position.set(0,q[1],q[0]);g.add(w);
+    var d=mesh(new T.CylinderGeometry(q[1]*0.55,q[1]*0.55,0.17,9),chrome,false,false);
+    d.rotation.z=PI/2;d.position.set(0,q[1],q[0]);g.add(d);
+    var gu=mesh(roundedBox(0.19,0.07,0.46,0.03,4),body,false,false);   /* mudguard */
+    gu.position.set(0,q[1]+0.34,q[0]);gu.userData.tint='body';g.add(gu);
+  });
+  [-1,1].forEach(function(sx){                                          /* front forks */
+    var f=mesh(new T.CylinderGeometry(0.035,0.035,0.62,6),chrome,false,false);
+    f.position.set(sx*0.10,0.60,0.585);f.rotation.x=-0.42;g.add(f);
+  });
+  var pipe=mesh(new T.CylinderGeometry(0.055,0.065,0.86,7),chrome,false,false);
+  pipe.rotation.set(PI/2-0.06,0,0);pipe.position.set(0.16,0.38,-0.40);g.add(pipe);
+  var lamp=mesh(new T.SphereGeometry(0.10,8,6),
+    new T.MeshStandardMaterial({color:0xf3f0e2,roughness:0.3,
+      emissive:0x2a2618,emissiveIntensity:0.5}),false,false);
+  lamp.position.set(0,0.86,0.66);g.add(lamp);
+  var tail=mesh(roundedBox(0.13,0.07,0.05,0.02,3),
+    new T.MeshStandardMaterial({color:0x6e1018,roughness:0.3}),false,false);
+  tail.position.set(0,0.80,-0.62);g.add(tail);
+  var tank=mesh(roundedBox(0.30,0.34,1.06,0.13,5),body,true,false);
+  tank.position.set(0,0.66,0.06);tank.userData.tint='body';g.add(tank);
+  var seat=mesh(roundedBox(0.26,0.13,0.52,0.06,4),dark,false,false);
+  seat.position.set(0,0.80,-0.34);g.add(seat);
+  var bars=mesh(new T.CylinderGeometry(0.028,0.028,0.62,6),dark,false,false);
+  bars.rotation.z=PI/2;bars.position.set(0,0.94,0.50);g.add(bars);
+  /* the rider: a torso that leans into the bars, and a helmet */
+  var torso=mesh(roundedBox(0.32,0.46,0.24,0.10,5),suit,true,false);
+  torso.position.set(0,1.06,-0.20);torso.rotation.x=-0.30;
+  torso.userData.tint='shirt';g.add(torso);
+  var helm=mesh(new T.SphereGeometry(0.135,10,8),dark,true,false);
+  helm.position.set(0,1.36,-0.09);g.add(helm);
+  [-1,1].forEach(function(sx){
+    var arm=mesh(roundedBox(0.085,0.085,0.52,0.038,4),suit,false,false);
+    arm.position.set(sx*0.17,1.02,0.16);arm.rotation.x=-0.52;
+    arm.userData.tint='shirt';g.add(arm);
+    var leg=mesh(roundedBox(0.12,0.12,0.44,0.05,4),dark,false,false);
+    leg.position.set(sx*0.19,0.62,-0.28);g.add(leg);
+  });
+  var head=mesh(new T.SphereGeometry(0.05,6,5),skinM,false,false);
+  head.position.set(0,1.30,0.02);g.add(head);
+  return g;
+}
+function tinyCar(){
+  var g=new T.Group();
+  var body=mesh(roundedBox(1.84,0.66,4.30,0.30,5),
+    new T.MeshStandardMaterial({color:0xffffff,roughness:0.36,metalness:0.45,
+      envMap:ENV_DAY,envMapIntensity:0.8}),true,false);
+  body.position.y=0.70;body.userData.tint=true;g.add(body);
+  var cab=mesh(roundedBox(1.60,0.60,2.05,0.28,5),
+    new T.MeshStandardMaterial({color:0x11161d,roughness:0.22,metalness:0.6,
+      envMap:ENV_DAY,envMapIntensity:1.0}),true,false);
+  cab.position.set(0,1.16,-0.16);g.add(cab);
+  var tyre=new T.MeshStandardMaterial({color:0x14161a,roughness:0.9});
+  [[0.86,1.35],[-0.86,1.35],[0.86,-1.42],[-0.86,-1.42]].forEach(function(q){
+    var w=mesh(new T.CylinderGeometry(0.33,0.33,0.22,10),tyre,false,false);
+    w.rotation.z=PI/2;w.position.set(q[0],0.33,q[1]);g.add(w);
+  });
+  return g;
+}
+var SIG={A:[],B:[]};
+function signalHead(set){
+  var g=new T.Group();
+  var pole=new T.MeshStandardMaterial({color:0x3c4148,roughness:0.5,metalness:0.6,
+    envMap:ENV_DAY,envMapIntensity:0.6});
+  var p=mesh(new T.CylinderGeometry(0.10,0.13,5.6,9),pole,true,false);p.position.y=2.8;g.add(p);
+  var arm=mesh(new T.CylinderGeometry(0.07,0.07,3.4,8),pole,true,false);
+  arm.rotation.z=PI/2;arm.position.set(1.7,5.45,0);g.add(arm);
+  var box=mesh(roundedBox(0.30,0.92,0.28,0.07,6),
+    new T.MeshStandardMaterial({color:0x14181e,roughness:0.7}),true,false);
+  box.position.set(3.1,4.95,0);g.add(box);
+  [[0.30,0xff2a1c],[0,0xffb020],[-0.30,0x22dd66]].forEach(function(q,i){
+    var m=new T.MeshStandardMaterial({color:0x22262c,emissive:q[1],emissiveIntensity:0,
+      roughness:0.35});
+    SIG[set].push(m);
+    var l=mesh(new T.CylinderGeometry(0.098,0.098,0.05,14),m,false,false);
+    l.rotation.x=PI/2;l.position.set(3.1,4.95+q[0],-0.16);g.add(l);
+  });
+  return g;
+}
+var sigT=0,sigPhase=0,SIGSEQ=[[2,0,9.5],[1,0,2.2],[0,2,9.5],[0,1,2.2]];
+function applySignals(){
+  var s=SIGSEQ[sigPhase];
+  SIG.A.forEach(function(m,i){m.emissiveIntensity=(i===s[0])?2.6:0;});
+  SIG.B.forEach(function(m,i){m.emissiveIntensity=(i===s[1])?2.6:0;});
+}
+function stepSignals(dt){
+  if(!SIG.A.length)return;
+  sigT+=dt;
+  if(sigT>SIGSEQ[sigPhase][2]){sigT=0;sigPhase=(sigPhase+1)%4;applySignals();}
+}
+
+/* =================================================================
+   NPC LIFE — the town moves on its own
+   The crowd and the traffic were already in the scene, but baked
+   into instance matrices: props, not agents. Both now carry a brain
+   and are re-posed every frame onto the same InstancedMeshes, so a
+   town that moves costs exactly the draw calls of one that does not.
+
+   Cars hold a lane, queue behind whatever is in front, stop at a red
+   and pick a turn at every junction. Pedestrians walk the pavement
+   ring around their block and cross at the corners - but only while
+   the traffic they are stepping in front of is actually stopped.
+   ================================================================= */
+var NPC={cars:[],peds:[],carPack:null,bikePack:null,pedPack:null,_pt:{x:0,z:0,hx:0,hz:0},_opt:[]};
+NPC.LANE=[1.6,4.2];          /* lane centres either side of the centre line   */
+NPC.SPD=[13.5,9.5];          /* m/s - the inside lane is the quicker one      */
+NPC.RING=CITY.pad-1.9;       /* the pavement line the crowd walks             */
+NPC.WALK=1.25;               /* m/s                                           */
+/* the small town ran 44 cars over 12.4 km of road. Keep that per metre and
+   a bigger one does not feel deserted; cap it so the gap check, which is
+   quadratic in the fleet, stays cheap */
+NPC.FLEET=Math.min(170,Math.round((2*CITY.N+1)*2*(2*CITY.N*CITY.P)/281));
+
+/* Signal set A faces the avenues (so it governs travel along Z), set B the
+   streets (travel along X). Only the inner 5x5 of junctions carries a head;
+   anywhere else there is nothing to obey. Amber counts as stop - a car that
+   is already in the box has passed this test and keeps going. */
+function npcStop(ax,i,j){
+  if(Math.abs(i)>CITY.SIG||Math.abs(j)>CITY.SIG)return false;
+  return SIGSEQ[sigPhase][ax?0:1]!==2;
+}
+/* Where a lane sits, as an offset from its road's centre line. Right-hand
+   traffic, matching the parked cars: travelling +X you sit at z above the
+   line, travelling +Z you sit at x below it. */
+function npcLane(ax,sgn,lane){return (ax?-sgn:sgn)*NPC.LANE[lane];}
+function npcYaw(ax,sgn){return ax?(sgn>0?0:PI):(sgn>0?PI/2:-PI/2);}
+function npcCarPos(c){
+  var cross=c.idx*CITY.P+npcLane(c.ax,c.sgn,c.lane)+(c.off||0)*c.sgn;
+  if(c.ax){c.z=c.s;c.x=cross;}else{c.x=c.s;c.z=cross;}
+}
+/* index of the junction the car is driving at */
+function npcNextJ(c){
+  var k=c.s/CITY.P;
+  return c.sgn>0?Math.floor(k+1e-4)+1:Math.ceil(k-1e-4)-1;
+}
+function npcCarNear(x,z,r){
+  for(var i=0;i<NPC.cars.length;i++){
+    var c=NPC.cars[i],dx=c.x-x,dz=c.z-z;
+    if(dx*dx+dz*dz<r*r)return true;
+  }
+  return false;
+}
+
+/* ---- traffic ------------------------------------------------------
+   Everything a car does is a target speed; one accel limiter turns the
+   slowest of them into motion, so a red light, a queue and the player
+   cutting across all brake the same way instead of fighting. */
+function npcGap(c){
+  var best=1e9,i,o;
+  for(i=0;i<NPC.cars.length;i++){
+    o=NPC.cars[i];
+    if(o===c)continue;
+    if(!o.turn&&o.ax===c.ax&&o.idx===c.idx&&o.sgn===c.sgn&&o.lane===c.lane){
+      var g=c.sgn*(o.s-c.s);                     /* same lane, same way */
+      if(g>0&&g<best)best=g;
+    }else if(o.turn){                            /* and whoever is in the box */
+      var dx=o.x-c.x,dz=o.z-c.z;
+      var f=c.ax?(c.sgn>0?dz:-dz):(c.sgn>0?dx:-dx);
+      if(f>0&&f<best&&Math.abs(c.ax?dx:dz)<4.2)best=f;
+    }
+  }
+  return best;
+}
+/* a turn is a steer toward the exit lane, not an arc: the yaw rate rounds
+   the corner on its own and the car snaps back onto the rails on the way out */
+function npcStartTurn(c,n){
+  var P=CITY.P,right=(c.plan==='R'),nax=c.ax?0:1;
+  var nsgn=c.ax?(right?-c.sgn:c.sgn):(right?c.sgn:-c.sgn);
+  var oth=c.idx,ex,ez;
+  if(nax){ex=n*P+npcLane(1,nsgn,c.lane);ez=oth*P+nsgn*(CITY.RH+6);}
+  else   {ez=n*P+npcLane(0,nsgn,c.lane);ex=oth*P+nsgn*(CITY.RH+6);}
+  c.turn={ex:ex,ez:ez,ax:nax,sgn:nsgn,idx:n};
+}
+function npcTurn(c,dt){
+  var t=c.turn,dx=t.ex-c.x,dz=t.ez-c.z,d=Math.sqrt(dx*dx+dz*dz);
+  var e=((Math.atan2(dx,dz)-c.yaw+PI)%TAU+TAU)%TAU-PI;
+  c.yaw+=clamp(e,-1.9*dt,1.9*dt);
+  c.v+=clamp(5.5-c.v,-9*dt,4*dt);
+  if(c.hit>0){c.hit-=dt;c.v=Math.min(c.v,1.0);}
+  c.x+=Math.sin(c.yaw)*c.v*dt;c.z+=Math.cos(c.yaw)*c.v*dt;
+  if(d<2.4){
+    c.ax=t.ax;c.sgn=t.sgn;c.idx=t.idx;c.turn=null;c.plan=null;
+    c.s=c.ax?c.z:c.x;c.j=npcNextJ(c);
+    npcCarPos(c);c.yaw=npcYaw(c.ax,c.sgn);
+  }
+}
+function npcRehome(c){
+  var N=CITY.N;
+  c.ax=Math.random()<0.5?1:0;
+  c.idx=Math.round(clamp(c.idx,-N,N));
+  c.sgn=Math.random()<0.5?1:-1;
+  c.lane=Math.random()<0.55?0:1;
+  c.s=(Math.random()*2-1)*(N*CITY.P-14);
+  c.plan=null;c.turn=null;c.hit=0;c.v=0;
+  npcCarPos(c);c.yaw=npcYaw(c.ax,c.sgn);c.j=npcNextJ(c);
+}
+NPC.stepCars=function(dt){
+  var P=CITY.P,N=CITY.N,STOP=CITY.RH+1.6,i,c;
+  var driving=!onFoot();
+  for(i=0;i<NPC.cars.length;i++){
+    c=NPC.cars[i];
+    /* a net under the whole thing: whatever went wrong, a car that is no
+       longer on the grid is put back on it rather than driven into the sea */
+    if(Math.abs(c.idx)>N||Math.abs(c.s)>N*P+24){npcRehome(c);continue;}
+    /* density parks the surplus, but only ever out of sight, so traffic
+       thinning out is something you drive into rather than watch happen */
+    var idle=(i>=NPC.activeCars);
+    if(idle!==!!c.idle&&(c.x-S.x)*(c.x-S.x)+(c.z-S.z)*(c.z-S.z)>14400)c.idle=idle;
+    if(c.idle)continue;
+    if(c.turn){npcTurn(c,dt);continue;}
+    var n=npcNextJ(c);
+    if(n!==c.j){c.j=n;c.plan=null;}              /* new junction, new decision */
+    var d=c.sgn*(n*P-c.s);
+    var jI=c.ax?c.idx:n,jJ=c.ax?n:c.idx;
+    /* choose the turn early: the stop line has to know whether we are
+       turning, and a turn wants slowing into long before the corner.
+       Only from the moves that leave another junction ahead - the town
+       ends at +/-N, and a car that takes the outward turn at the last
+       one drives off into the fields and never comes back. */
+    if(!c.plan&&d<26){
+      var opts=NPC._opt;opts.length=0;
+      if(Math.abs(n+c.sgn)<=N)opts.push('S','S','S');
+      if(Math.abs(c.idx+(c.ax?-c.sgn:c.sgn))<=N)opts.push('R');
+      if(Math.abs(c.idx+(c.ax?c.sgn:-c.sgn))<=N)opts.push('L');
+      c.plan=opts[(Math.random()*opts.length)|0]||'S';
+    }
+    var want=NPC.SPD[c.lane]*NPC.MOOD.pace*(c.bike?1.12:1);
+    if(c.plan&&c.plan!=='S'&&d<22)want=Math.min(want,6.0);
+    if(d>STOP-0.7&&npcStop(c.ax,jI,jJ))want=Math.min(want,Math.max(0,(d-STOP)*0.9));
+    var keep=6.2+NPC.MOOD.patience*3.4;          /* the gap they will sit at */
+    var gap=npcGap(c);
+    if(gap<keep+11)want=Math.min(want,Math.max(0,(gap-keep)*1.4));
+    if(driving){                                 /* and the player is traffic too */
+      var dx=S.x-c.x,dz=S.z-c.z;
+      var f=c.ax?(c.sgn>0?dz:-dz):(c.sgn>0?dx:-dx);
+      if(f>0&&f<19&&Math.abs(c.ax?dx:dz)<3.6)
+        want=Math.min(want,Math.max(0,(f-6.8)*1.3));
+    }
+    if(c.hit>0){c.hit-=dt;want=0;}
+    c.v+=clamp(want-c.v,-9*dt,(6.5-NPC.MOOD.patience*2.6)*(c.bike?1.5:1)*dt);
+    c.s+=c.sgn*c.v*dt;
+    npcCarPos(c);c.yaw=npcYaw(c.ax,c.sgn);
+    if(c.plan&&c.plan!=='S'&&c.sgn*(n*P-c.s)<CITY.RH-1.0)npcStartTurn(c,n);
+  }
+};
+
+/* ---- the crowd ----------------------------------------------------
+   t runs 0..4 round the block, one unit per side, so a corner is an
+   integer and a crossing is simply the moment t steps over one. */
+function npcPedPoint(bi,bj,t,o){
+  var R=NPC.RING,cx=(bi+0.5)*CITY.P,cz=(bj+0.5)*CITY.P;
+  var u=((t%4)+4)%4,s=Math.floor(u),f=u-s;
+  if(s===0){o.x=cx-R+2*R*f;o.z=cz-R;o.hx=1;o.hz=0;}
+  else if(s===1){o.x=cx+R;o.z=cz-R+2*R*f;o.hx=0;o.hz=1;}
+  else if(s===2){o.x=cx+R-2*R*f;o.z=cz+R;o.hx=-1;o.hz=0;}
+  else{o.x=cx-R;o.z=cz+R-2*R*f;o.hx=0;o.hz=-1;}
+  return o;
+}
+/* corner index -> which corner of the block it is, as a sign pair */
+function npcCornerX(k){return (k===1||k===2)?1:-1;}
+function npcCornerZ(k){return k>=2?1:-1;}
+function npcCornerT(sx,sz){return sz<0?(sx<0?0:1):(sx>0?2:3);}
+function npcTryCross(p,k){
+  if(Math.random()>0.34)return;
+  var N=CITY.N,sx=npcCornerX(k),sz=npcCornerZ(k);
+  var overX=Math.random()<0.5;                   /* step off in X or in Z */
+  var nbi=p.bi+(overX?sx:0),nbj=p.bj+(overX?0:sz);
+  if(nbi<-N||nbi>N-1||nbj<-N||nbj>N-1)return;
+  /* stepping in X cuts across an avenue, whose traffic runs in Z (set A);
+     stepping in Z cuts across a street, traffic in X (set B) */
+  var jI=p.bi+(sx>0?1:0),jJ=p.bj+(sz>0?1:0);
+  var a=npcPedPoint(p.bi,p.bj,k,{}),
+      nt=npcCornerT(overX?-sx:sx,overX?sz:-sz),
+      b=npcPedPoint(nbi,nbj,nt,{});
+  if(Math.abs(jI)<=CITY.SIG&&Math.abs(jJ)<=CITY.SIG){
+    if(!npcStop(overX?1:0,jI,jJ)){               /* the light says no... */
+      if(Math.random()>NPC.MOOD.jaywalk||npcCarNear(a.x,a.z,26))return;
+    }                                            /* ...but some of them go anyway */
+  }else if(npcCarNear(a.x,a.z,16))return;        /* no head here: use your eyes */
+  var dx=b.x-a.x,dz=b.z-a.z;
+  p.cross={x0:a.x,z0:a.z,x1:b.x,z1:b.z,u:0,
+    len:Math.sqrt(dx*dx+dz*dz),yaw:Math.atan2(dx,dz),bi:nbi,bj:nbj,t:nt};
+}
+NPC.stepPeds=function(dt){
+  var i,p,c,side,q=NPC._pt,ps=Math.abs(S.vx);
+  for(i=0;i<NPC.peds.length;i++){
+    p=NPC.peds[i];
+    /* give way to the player: nobody walks on into a moving car */
+    var dx=S.x-p.x,dz=S.z-p.z,d2=dx*dx+dz*dz;
+    var away=(i>=NPC.activePeds);
+    if(away!==!!p.idle&&d2>8100)p.idle=away;
+    if(p.idle)continue;
+    /* knocked over: he lies where he fell, then picks himself up */
+    if(p.down>0){
+      p.down-=dt;
+      p.fall+=((p.down>0.9?1:0)-p.fall)*Math.min(1,dt*7);
+      p.x+=p.kx*dt;p.z+=p.kz*dt;p.kx*=0.86;p.kz*=0.86;
+      continue;
+    }
+    if(p.fall>0.01)p.fall+=(0-p.fall)*Math.min(1,dt*3.2);
+    p.moving=!((d2<42&&ps>1.5)||d2<4.5);
+    if(p.moving){
+      p.gait+=p.v*dt*2.7;
+      if(p.cross){
+        c=p.cross;c.u+=p.v*dt/c.len;
+        if(c.u>=1){p.bi=c.bi;p.bj=c.bj;p.t=c.t;p.side=Math.floor(c.t);p.cross=null;}
+      }else{
+        p.t=((p.t+p.dir*p.v*dt/(2*NPC.RING))%4+4)%4;
+        side=Math.floor(p.t);
+        if(side!==p.side){p.side=side;npcTryCross(p,p.dir>0?side:(side+1)%4);}
+      }
+    }
+    /* the position is derived, never accumulated: someone who has stopped
+       to let the player past still stands exactly on their bit of pavement,
+       and a walker is on the kerb from the very first frame rather than
+       wherever the seed left them */
+    if(p.cross){
+      p.x=lerp(p.cross.x0,p.cross.x1,p.cross.u);
+      p.z=lerp(p.cross.z0,p.cross.z1,p.cross.u);
+      p.yaw=p.cross.yaw;
+    }else{
+      npcPedPoint(p.bi,p.bj,p.t,q);
+      p.x=q.x;p.z=q.z;p.yaw=Math.atan2(p.dir*q.hx,p.dir*q.hz);
+    }
+  }
+};
+
+/* ---- the walk ------------------------------------------------------
+   The crowd is one instance per person, so a pose cannot be per-figure -
+   but it can be per-part. Tag the six limb pieces, bake a table of the
+   swing matrices for a whole stride, and every walker is a lookup: the
+   pose costs nothing per frame and the legs still move.
+   The knee folds; the ankle does not. At the distance you see the crowd
+   from, that is the difference between a walk and a shuffle. */
+NPC.GAIT=32;                                     /* frames in a stride, power of 2 */
+function npcPivotRot(p,a){
+  return new T.Matrix4().makeTranslation(p.x,p.y,p.z)
+    .multiply(new T.Matrix4().makeRotationX(a))
+    .multiply(new T.Matrix4().makeTranslation(-p.x,-p.y,-p.z));
+}
+/* slots: 0/1/2 left thigh, shin, foot - 3/4/5 the right - 6/7 the arms.
+   poseChain leaves each joint where the IK put it, so the three pivots a
+   leg turns about are simply where its bones start. */
+function npcTagLimbs(P){
+  [[P.legL,0,1,2],[P.legR,3,4,5],[P.armL,6,6,6],[P.armR,7,7,7]].forEach(function(q){
+    ['up','fore','hand'].forEach(function(part,k){
+      q[0][part].traverse(function(o){if(o.isMesh)o.userData.slot=q[k+1];});
+    });
+  });
+}
+NPC.bakeGait=function(P){
+  var leg=[P.legL,P.legR],hip=[P.hipL,P.hipR],sh=[P.shL,P.shR];
+  var knee=[leg[0].fore.position.clone(),leg[1].fore.position.clone()];
+  var ankle=[leg[0].hand.position.clone(),leg[1].hand.position.clone()];
+  var tab=[],f,i;
+  for(f=0;f<NPC.GAIT;f++){
+    var s=Math.sin(f/NPC.GAIT*TAU),frame=[];
+    for(i=0;i<2;i++){
+      var a=i?-s:s;                              /* +a is the leg trailing behind */
+      var hipA=0.52*a,kneeA=0.85*Math.max(0,a);
+      /* the sole is what you actually read: pitch it toe-down as the foot
+         pushes off and toe-up before it lands, and let the ankle take
+         whatever is left over after the hip and the knee have had their
+         say - otherwise the foot just rides the shin and points at the sky */
+      var ankA=0.40*a-hipA-kneeA;
+      var H=npcPivotRot(hip[i],hipA);
+      var K=H.clone().multiply(npcPivotRot(knee[i],kneeA));
+      frame.push(H,K,K.clone().multiply(npcPivotRot(ankle[i],ankA)));
+    }
+    for(i=0;i<2;i++)frame.push(npcPivotRot(sh[i],-0.34*(i?-s:s)));   /* arms counter */
+    tab.push(frame);
+  }
+  NPC.gaitTab=tab;
+};
+
+/* ---- back onto the instanced meshes -------------------------------- */
+var _npcM=new T.Matrix4(),_npcQ=new T.Quaternion(),_npcE=new T.Euler(),
+    _npcV=new T.Vector3(),_npcS=new T.Vector3();
+/* Redone only when the camera has moved far enough for the answer to change,
+   which makes 961 cars cost nothing on the frames in between. */
+NPC.STATIC=[];
+/* Register anything static and instanced - parked cars, lamps, trees, the
+   plant on the roofs. They never move, so the packing only has to be redone
+   when the camera has gone far enough for the answer to change. */
+function cullable(pack,mats,range){
+  if(!pack)return;
+  NPC.STATIC.push({p:pack,r2:(range||NPC.CULL)*(range||NPC.CULL),
+    at:mats.map(function(m){return {x:m.elements[12],z:m.elements[14],m:m};})});
+}
+NPC.cullStatic=function(){
+  var c=camera.position;
+  if(NPC.parkLast&&(c.x-NPC.parkLast.x)*(c.x-NPC.parkLast.x)+
+                   (c.z-NPC.parkLast.z)*(c.z-NPC.parkLast.z)<324)return;
+  NPC.parkLast={x:c.x,z:c.z};
+  for(var k=0;k<NPC.STATIC.length;k++){
+    var S2=NPC.STATIC[k];S2.p.begin();
+    for(var i=0;i<S2.at.length;i++){
+      var q=S2.at[i],dx=q.x-c.x,dz=q.z-c.z;
+      if(dx*dx+dz*dz<=S2.r2)S2.p.push(q.m,null,i);
+    }
+    S2.p.end();
+  }
+};
+NPC.write=function(){
+  var i,c,p;
+  if(NPC.carPack||NPC.bikePack){
+    if(NPC.carPack)NPC.carPack.begin();
+    if(NPC.bikePack)NPC.bikePack.begin();
+    for(i=0;i<NPC.cars.length;i++){
+      c=NPC.cars[i];
+      var pack=c.bike?NPC.bikePack:NPC.carPack;
+      if(!pack||c.idle)continue;
+      var ccx=c.x-camera.position.x,ccz=c.z-camera.position.z;
+      if(ccx*ccx+ccz*ccz>NPC.CULL2)continue;
+      /* a bike leans into a turn, which is most of what tells you it is a
+         bike and not a very narrow car */
+      var lean=c.bike&&c.turn?clamp((c.yaw-(c.ly===undefined?c.yaw:c.ly))*9,-0.5,0.5):0;
+      c.ly=c.yaw;
+      _npcQ.setFromEuler(_npcE.set(0,c.yaw,-lean,'YXZ'));
+      pack.push(_npcM.compose(_npcV.set(c.x,0,c.z),_npcQ,_npcS.set(1,1,1)),null,c.slot);
+    }
+    if(NPC.carPack)NPC.carPack.end();
+    if(NPC.bikePack)NPC.bikePack.end();
+  }
+  if(NPC.pedPack){
+    NPC.pedPack.begin();
+    for(i=0;i<NPC.peds.length;i++){
+      p=NPC.peds[i];
+      /* the crowd is one instance per person, so the limbs cannot articulate:
+         a bob on the stride and a little roll with it read as a walk at the
+         distance you ever see them from, and cost nothing */
+      var dcx=p.x-camera.position.x,dcz=p.z-camera.position.z;
+      if(p.idle||dcx*dcx+dcz*dcz>NPC.CULL2)continue;
+      var b=p.moving?Math.abs(Math.sin(p.gait)):0,sc=p.sc;
+      var sw=(p.moving&&NPC.gaitTab)?
+        NPC.gaitTab[(p.gait*NPC.GAIT/TAU|0)&(NPC.GAIT-1)]:null;
+      /* pitched over onto his back, and dropped to the ground with it */
+      var f=p.fall||0;
+      _npcQ.setFromEuler(_npcE.set(-f*1.48,p.yaw,
+        (p.moving?0.040*Math.sin(p.gait):0)*(1-f),'YXZ'));
+      NPC.pedPack.push(_npcM.compose(
+        _npcV.set(p.x,0.16+(0.936*p.sc+b*0.022)*(1-f*0.72),p.z),
+        _npcQ,_npcS.set(sc,sc,sc)),f>0.15?null:sw,i);
+    }
+    NPC.pedPack.end();
+  }
+};
+
+/* ---- how the town plays ------------------------------------------
+   Five knobs the rest of the file reads. They were briefly driven by an
+   LLM through a local proxy; free models rate-limited, went away, and
+   one answered by quoting the question back, so the town spent more time
+   ignoring the brain than listening to it. Constants do the same job
+   without a key, a server round trip or a failure mode. */
+NPC.MOOD={
+  density:0.75,      /* how much of the fleet is out                */
+  pace:1.00,         /* speed multiplier                            */
+  patience:0.60,     /* following gap, and how briskly they pull away */
+  jaywalk:0.15,      /* how readily people cross against the light  */
+  crowd:0.80         /* how many are out walking                    */
+};
+NPC.activeCars=1e9;NPC.activePeds=1e9;
+/* Nothing beyond this is worth submitting. The crowd and the parked cars
+   are one instanced set each, spanning the whole town, so the GPU was
+   shading every one of them every frame however far behind you they were -
+   between them, two thirds of the triangles in the scene. */
+NPC.CULL=155;NPC.CULL2=NPC.CULL*NPC.CULL;
+NPC.stepBrain=function(){
+  NPC.activeCars=Math.round(NPC.MOOD.density*NPC.cars.length);
+  NPC.activePeds=Math.round(NPC.MOOD.crowd*NPC.peds.length);
+};
+
+window.__NPC=NPC;              /* a handle to poke at from the console */
+
+/* =================================================================
+   AUTOPILOT — the car drives itself round town
+   It does not get to move the car. It only presses the pedals and
+   turns the wheel, and the same physics as always does the rest, so
+   the car still leans, still dives under braking and can still be
+   caught out. Pure pursuit on the lane grid: aim at a point down the
+   lane, steer at it, and pick a speed from whatever is coming.
+   City only - the track has no lane grid to follow.
+   ================================================================= */
+var AUTO={on:false,ax:0,idx:0,sgn:1,lane:1,plan:null,cruise:17,why:''};
+
+/* which lane are we on, given where the car is pointing */
+function autoSnap(){
+  var P=CITY.P,N=CITY.N;
+  var fx=Math.sin(S.yaw),fz=Math.cos(S.yaw);
+  AUTO.ax=Math.abs(fz)>=Math.abs(fx)?1:0;          /* 1 = travelling along Z */
+  AUTO.sgn=(AUTO.ax?fz:fx)>=0?1:-1;
+  var cross=AUTO.ax?S.x:S.z;
+  AUTO.idx=clamp(Math.round(cross/P),-N,N);
+  var bd=1e9,l;
+  for(l=0;l<2;l++){
+    var c=AUTO.idx*P+npcLane(AUTO.ax,AUTO.sgn,l),d=Math.abs(cross-c);
+    if(d<bd){bd=d;AUTO.lane=l;}
+  }
+  AUTO.plan=null;
+}
+/* the nearest thing in our way: traffic in the lane, or somebody crossing */
+function autoAhead(){
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw),best=1e9,i,o,dx,dz,f,lat;
+  for(i=0;i<NPC.cars.length;i++){
+    o=NPC.cars[i];if(o.idle)continue;
+    dx=o.x-S.x;dz=o.z-S.z;
+    f=dx*sy+dz*cy;lat=Math.abs(dx*cy-dz*sy);
+    if(f>0&&lat<3.1&&f<best)best=f;
+  }
+  for(i=0;i<NPC.peds.length;i++){
+    o=NPC.peds[i];if(o.idle)continue;
+    dx=o.x-S.x;dz=o.z-S.z;
+    f=dx*sy+dz*cy;lat=Math.abs(dx*cy-dz*sy);
+    /* a walker gets a wider berth and counts from further back: they step
+       off a kerb without looking and the car has to already be slowing */
+    if(f>0&&lat<2.6&&f-4<best)best=f-4;
+  }
+  return best;
+}
+function autoDrive(dt){
+  var P=CITY.P,N=CITY.N,RH=CITY.RH;
+  var along=AUTO.ax?S.z:S.x,cross=AUTO.ax?S.x:S.z;
+
+  /* Off the grid there is no next junction to aim at, and a car that has
+     driven out along one of the roads that leave town will happily keep
+     going into the fields. So: if we are past the last junction, or nowhere
+     near the lane we think we are on, stop following the grid and drive
+     back to it. Once we are inside, work out afresh which lane we are on. */
+  var lost=Math.abs(along)>N*P+3||
+           Math.abs(cross-(AUTO.idx*P+npcLane(AUTO.ax,AUTO.sgn,AUTO.lane)))>15;
+  if(lost){
+    var bx=clamp(Math.round(S.x/P),-N,N)*P,bz=clamp(Math.round(S.z/P),-N,N)*P;
+    var e2=((Math.atan2(bx-S.x,bz-S.z)-S.yaw+PI)%TAU+TAU)%TAU-PI;
+    input.steer=clamp(e2*2.4,-1,1);
+    var back=Math.abs(e2)>1.9;                     /* it is behind us: turn round */
+    var wv=back?4:Math.min(13,6+16/(1+Math.abs(e2)*7));
+    var ev=wv-Math.abs(S.vx);
+    input.gas =ev>0.25?clamp(ev*0.32,0,1):0;
+    input.back=ev<-1.1?clamp(-ev*0.24,0,1):0;
+    input.hand=0;
+    AUTO.why='חוזר לכביש';
+    if(Math.abs(S.x-bx)<24&&Math.abs(S.z-bz)<24&&Math.abs(S.vx)>2)autoSnap();
+    return;
+  }
+
+  var n=clamp(AUTO.sgn>0?Math.floor(along/P+1e-4)+1:Math.ceil(along/P-1e-4)-1,-N,N);
+  var d=AUTO.sgn*(n*P-along);                      /* metres to the junction */
+
+  /* pick a turn while there is still room to slow down for it, and only
+     from the ones that leave another junction ahead. d can be negative at
+     the very edge - the junction is behind us - and then a turn is the only
+     thing that gets us back inside, never straight on. */
+  if(!AUTO.plan&&d<34){
+    var opts=NPC._opt;opts.length=0;
+    if(d>0&&Math.abs(n+AUTO.sgn)<=N)opts.push('S','S','S');
+    if(Math.abs(AUTO.idx+(AUTO.ax?-AUTO.sgn:AUTO.sgn))<=N)opts.push('R');
+    if(Math.abs(AUTO.idx+(AUTO.ax?AUTO.sgn:-AUTO.sgn))<=N)opts.push('L');
+    AUTO.plan=opts[(Math.random()*opts.length)|0]||'S';
+  }
+
+  var turning=(AUTO.plan&&AUTO.plan!=='S'&&d<RH+11),tx,tz;
+  if(turning){
+    var right=(AUTO.plan==='R'),nax=AUTO.ax?0:1;
+    var nsgn=AUTO.ax?(right?-AUTO.sgn:AUTO.sgn):(right?AUTO.sgn:-AUTO.sgn);
+    var oth=AUTO.idx;
+    if(nax){tx=n*P+npcLane(1,nsgn,AUTO.lane);tz=oth*P+nsgn*(RH+9);}
+    else   {tz=n*P+npcLane(0,nsgn,AUTO.lane);tx=oth*P+nsgn*(RH+9);}
+    /* out the far side: the new road becomes the current one */
+    if(nsgn*((nax?S.z:S.x)-oth*P)>RH+2.5){
+      AUTO.ax=nax;AUTO.sgn=nsgn;AUTO.idx=n;AUTO.plan=null;
+    }
+  }else{
+    /* straight: aim at a point down our own lane, which pulls the car onto
+       the lane line as well as along it */
+    var lc=AUTO.idx*P+npcLane(AUTO.ax,AUTO.sgn,AUTO.lane);
+    var look=along+AUTO.sgn*15;
+    if(AUTO.ax){tx=lc;tz=look;}else{tz=lc;tx=look;}
+  }
+
+  var err=((Math.atan2(tx-S.x,tz-S.z)-S.yaw+PI)%TAU+TAU)%TAU-PI;
+  input.steer=clamp(err*2.4,-1,1);
+
+  /* speed: the lowest of every reason to be going slower than the cruise */
+  var spd=Math.abs(S.vx),want=AUTO.cruise,why='נוסע';
+  if(AUTO.plan&&AUTO.plan!=='S'&&d<34){want=Math.min(want,8.0);why='מאט לפנייה';}
+  var STOP=RH+2.6,jI=AUTO.ax?AUTO.idx:n,jJ=AUTO.ax?n:AUTO.idx;
+  if(d>STOP-0.9&&npcStop(AUTO.ax,jI,jJ)){
+    var s=Math.max(0,(d-STOP)*0.85);
+    if(s<want){want=s;why='עוצר ברמזור';}
+  }
+  var gap=autoAhead();
+  if(gap<26){
+    var g=Math.max(0,(gap-7.5)*1.2);
+    if(g<want){want=g;why=gap<9?'עוצר':'שומר מרחק';}
+  }
+  want=Math.min(want,6+16/(1+Math.abs(err)*7));     /* never power through a correction */
+  AUTO.why=why;
+
+  var e=want-spd;
+  input.gas =e>0.25?clamp(e*0.32,0,1):0;
+  input.back=e<-1.1?clamp(-e*0.24,0,1):0;
+  input.hand=0;
+}
+function toggleAuto(v){
+  var on=(v===undefined)?!AUTO.on:!!v;
+  if(on&&(MODE!=='city'||onFoot())){
+    flash('טייס אוטומטי','רק בעיר, ורק כשאתה ברכב');return;
+  }
+  AUTO.on=on;
+  if(on){autoSnap();flash('טייס אוטומטי דולק','כל מגע בהגה או בגז מכבה אותו');}
+  else{input.steer=input.gas=input.back=0;flash('טייס אוטומטי כבוי','');}
+  var b=document.querySelector('[data-a="auto"]');
+  if(b)b.classList.toggle('on',AUTO.on);
+}
+/* any hand on the controls takes it back, the way a real one lets go */
+function autoInterrupt(){if(AUTO.on)toggleAuto(false);}
+window.__AUTO=AUTO;            /* a handle to poke at from the console */
+NPC.step=function(dt){
+  if(!NPC.carPack&&!NPC.bikePack&&!NPC.pedPack)return;
+  NPC.stepBrain(dt);
+  NPC.stepCars(dt);
+  NPC.stepPeds(dt);
+  NPC.write();
+  NPC.cullStatic();
+};
+/* fleet: lanes picked at random, but never nose to tail with something
+   already there, or they spend the first second untangling themselves */
+NPC.spawn=function(rnd){
+  var P=CITY.P,N=CITY.N,tries=0,i,o,ok;
+  while(NPC.cars.length<NPC.FLEET&&tries<NPC.FLEET*60){
+    tries++;
+    var ax=rnd()<0.5?1:0,idx=Math.floor(rnd()*(2*N+1))-N;
+    var sgn=rnd()<0.5?1:-1,lane=rnd()<0.55?0:1,s=(rnd()*2-1)*(N*P-10);
+    ok=true;
+    for(i=0;i<NPC.cars.length;i++){
+      o=NPC.cars[i];
+      if(o.ax===ax&&o.idx===idx&&o.sgn===sgn&&o.lane===lane&&Math.abs(o.s-s)<24){ok=false;break;}
+    }
+    if(!ok)continue;
+    /* one in five is on two wheels: same lane, same lights, same queue,
+       but it sits a little off the car line and pulls away harder */
+    var bike=rnd()<0.21;
+    var c={ax:ax,idx:idx,sgn:sgn,lane:lane,s:s,v:NPC.SPD[lane]*(0.6+rnd()*0.4),
+           x:0,z:0,yaw:0,plan:null,turn:null,hit:0,j:0,
+           bike:bike,off:bike?(rnd()<0.5?-0.62:0.62):0};
+    npcCarPos(c);c.yaw=npcYaw(ax,sgn);c.j=npcNextJ(c);
+    NPC.cars.push(c);
+  }
+};
+
+/* ---- what stands on one block ------------------------------------
+   A city is built to the pavement. Its blocks are a run of buildings
+   shoulder to shoulder along the street, every one a different width and
+   height, with their backs around a courtyard nobody ever sees - and the
+   towers rise out of that wall rather than standing alone in the middle
+   of a plot. That street wall is the whole difference between somewhere
+   that reads as a city and a field of boxes on lawns, so every block in
+   town gets one and only the outskirts keep their detached houses. */
+function blockPlan(type,rnd,tower){
+  var Z=CITY.zone,out=[],i;
+  function put(x,z,hx,hz,h,s){out.push({x:x,z:z,hx:hx,hz:hz,h:h,s:s});}
+  function w(v){return Math.max(3.2,Math.round(v/1.6)*1.6);}   /* whole window bays */
+
+  if(type==='res'){
+    var n=3,c=Z*2/n;
+    for(i=0;i<n;i++)for(var j=0;j<n;j++){
+      if(rnd()<0.14)continue;
+      put(-Z+c*(i+0.5)+(rnd()-0.5)*1.6,-Z+c*(j+0.5)+(rnd()-0.5)*1.6,
+          6,rnd()<0.4?4:6,rnd()<0.45?4:8,-1);
+    }
+    return out;
+  }
+
+  var mid=(type==='mid');
+  var D=mid?9.5:12.5;                       /* how deep the wall of shops is */
+  var base=mid?15:25,vary=mid?24:38;        /* the storey count it steps between */
+  function st(){return rnd()<0.42?0:(rnd()<0.55?1:2);}
+  function H(){return base+Math.pow(rnd(),1.35)*vary;}
+
+  /* the four runs, the side ones inset so they meet the front ones at the
+     corner instead of growing through them */
+  [[0,-1,Z],[0,1,Z],[-1,0,Z-D],[1,0,Z-D]].forEach(function(e){
+    var nx=e[0],nz=e[1],half=e[2],t=-half;
+    while(t<half-4){
+      var len=Math.min(half-t,7+rnd()*15);
+      if(rnd()<0.08){t+=len;continue;}        /* an alley, or a plot never built on */
+      var c=t+len/2,hw=w(len/2),hd=w(D/2),h=H();
+      if(nx)put(nx*(Z-D/2),c,hd,hw,h,st());
+      else  put(c,nz*(Z-D/2),hw,hd,h,st());
+      t+=len;
+    }
+  });
+
+  /* and in the business districts, what you actually see from across town */
+  if(tower){
+    var count=rnd()<0.58?1:2;
+    for(i=0;i<count;i++){
+      var tw=w(Z*(0.24+rnd()*0.20)),td=w(Z*(0.24+rnd()*0.20));
+      put((rnd()-0.5)*(Z-D-tw)*1.2,(rnd()-0.5)*(Z-D-td)*1.2,
+          tw,td,72+Math.pow(rnd(),1.7)*150,rnd()<0.7?0:2);
+    }
+  }
+  return out;
+}
+
+
+/* =================================================================
+   HOME — the one building in town that is yours.
+
+   Everything else in the city is a facade with a lit window texture on
+   it. This one is built the way a house actually is: outer walls with
+   holes punched for the door and the windows, a floor slab between the
+   storeys, a stair that connects them, rooms with things in them, and a
+   garage you can drive into. It is one block's worth of geometry for the
+   whole thing, which is why only one of it exists.
+   ================================================================= */
+var HOME={i:-6,j:1,x:0,z:0,door:null};
+HOME.x=(HOME.i+0.5)*86;HOME.z=(HOME.j+0.5)*86;
+HOME.open=false;HOME.swing=0;
+
+/* the button: on the drive, nose at the garage. If you were on foot it puts
+   you back in the car first - there is no walking home from downtown. */
+function goHome(){
+  if(MODE!=='city')setWorld('city');
+  if(onFoot())toggleFoot();
+  resetCar(HOME.x+9.2,HOME.z-15,0);
+  snapCam();
+  flash('הבית שלך','לחיצה על הדלת פותחת אותה');
+}
+/* a door swings on its hinge, so it pivots about its edge, not its middle */
+function stepDoor(dt){
+  if(!HOME.doorMesh)return;
+  var want=HOME.open?1:0;
+  if(Math.abs(HOME.swing-want)<0.002)return;
+  HOME.swing+=clamp(want-HOME.swing,-dt*2.6,dt*2.6);
+  HOME.doorMesh.rotation.y=HOME.swing*1.85;   /* outward, onto the porch */
+}
+function toggleDoor(){
+  HOME.open=!HOME.open;
+  flash(HOME.open?'הדלת נפתחה':'הדלת נסגרה','');
+}
+
+/* a wall with rectangular holes in it. Slice it along its length: solid
+   between the holes, a sill under each and a lintel over it. */
+function homeWall(G,mat,ax,az,bx,bz,y0,y1,th,holes){
+  var dx=bx-ax,dz=bz-az,len=Math.hypot(dx,dz),ux=dx/len,uz=dz/len;
+  var yaw=Math.atan2(ux,uz),i,seg=[],t=0;
+  holes=(holes||[]).slice().sort(function(p,q){return p[0]-q[0];});
+  function piece(t0,t1,c0,c1){
+    if(t1-t0<0.02||c1-c0<0.02)return;
+    var m=mesh(new T.BoxGeometry(th,c1-c0,t1-t0),mat,true,true);
+    m.position.set(ax+ux*(t0+t1)/2,(c0+c1)/2,az+uz*(t0+t1)/2);
+    m.rotation.y=yaw;G.add(m);
+  }
+  for(i=0;i<holes.length;i++){
+    var h=holes[i];
+    piece(t,h[0],y0,y1);                       /* solid up to the hole   */
+    piece(h[0],h[1],y0,h[2]);                  /* sill under it          */
+    piece(h[0],h[1],h[3],y1);                  /* lintel over it         */
+    t=h[1];
+  }
+  piece(t,len,y0,y1);
+  return {yaw:yaw,ux:ux,uz:uz,len:len};
+}
+function homeGlass(G,mat,ax,az,ux,uz,t0,t1,y0,y1,yaw){
+  var m=mesh(new T.BoxGeometry(0.05,y1-y0,t1-t0),mat,false,false);
+  m.position.set(ax+ux*(t0+t1)/2,(y0+y1)/2,az+uz*(t0+t1)/2);
+  m.rotation.y=yaw;G.add(m);
+}
+
+function buildHome(){
+  var G=new T.Group(),cx=HOME.x,cz=HOME.z,Y=0.16,i;
+  var M={
+    wall :new T.MeshStandardMaterial({map:tex(concreteTexture('#e8e0d2'),1,1),roughness:0.92,
+      envMap:ENV_DAY,envMapIntensity:0.25}),
+    inner:new T.MeshStandardMaterial({color:0xf2eee6,roughness:0.95,side:T.DoubleSide}),
+    floor:new T.MeshStandardMaterial({map:tex(concreteTexture('#b98f63'),1,1),roughness:0.72,
+      envMap:ENV_DAY,envMapIntensity:0.2}),
+    roof :CMAT.tile,
+    trim :new T.MeshStandardMaterial({color:0x36404c,roughness:0.5,metalness:0.35,
+      envMap:ENV_DAY,envMapIntensity:0.6}),
+    glass:new T.MeshPhysicalMaterial({color:0x9fc4d8,roughness:0.06,metalness:0,
+      transmission:0.86,transparent:true,opacity:0.55,envMap:ENV_DAY,envMapIntensity:1.1}),
+    wood :new T.MeshStandardMaterial({color:0x6d4a30,roughness:0.72}),
+    sofa :new T.MeshStandardMaterial({color:0x4a5a6b,roughness:0.9}),
+    steel:new T.MeshStandardMaterial({color:0xaeb4bb,roughness:0.35,metalness:0.85,
+      envMap:ENV_DAY,envMapIntensity:0.8}),
+    lawn :CMAT.grass,path:CMAT.pave
+  };
+
+  /* ---- the plot: lawn, drive, path, fence ---- */
+  var Z=CITY.zone+2.2;
+  var lawn=new T.Mesh(new T.PlaneGeometry(Z*2,Z*2),M.lawn);
+  lawn.rotation.x=-PI/2;lawn.position.set(cx,Y+0.012,cz);lawn.receiveShadow=true;G.add(lawn);
+  var drive=new T.Mesh(new T.PlaneGeometry(6.4,Z+9),M.path);
+  drive.rotation.x=-PI/2;drive.position.set(cx+9.2,Y+0.02,cz-Z+(Z+9)/2-9);
+  drive.receiveShadow=true;G.add(drive);
+  var path=new T.Mesh(new T.PlaneGeometry(2.2,Z+1),M.path);
+  path.rotation.x=-PI/2;path.position.set(cx-1.0,Y+0.02,cz-Z+(Z+1)/2);
+  path.receiveShadow=true;G.add(path);
+  for(i=-1;i<=1;i+=2){                                  /* side and back fence */
+    var f1=mesh(new T.BoxGeometry(0.16,1.35,Z*2),M.trim,true,false);
+    f1.position.set(cx+i*Z,Y+0.68,cz);G.add(f1);
+  }
+  var back=mesh(new T.BoxGeometry(Z*2,1.35,0.16),M.trim,true,false);
+  back.position.set(cx,Y+0.68,cz+Z);G.add(back);
+  [[-Z,-3.4],[3.0,6.0],[12.4,Z]].forEach(function(r){    /* front fence, two gaps */
+    var w=mesh(new T.BoxGeometry(r[1]-r[0],1.35,0.16),M.trim,true,false);
+    w.position.set(cx+(r[0]+r[1])/2,Y+0.68,cz-Z);G.add(w);
+  });
+
+  /* ---- the garage: three walls and a flat roof, open to the drive ---- */
+  var gx0=6.0,gx1=12.4,gz0=1.0,gz1=9.4,gh=3.30;
+  homeWall(G,M.wall,cx+gx0,cz+gz0,cx+gx0,cz+gz1,Y,Y+gh,0.24,[]);
+  homeWall(G,M.wall,cx+gx1,cz+gz0,cx+gx1,cz+gz1,Y,Y+gh,0.24,[]);
+  homeWall(G,M.wall,cx+gx0,cz+gz1,cx+gx1,cz+gz1,Y,Y+gh,0.24,[]);
+  var gr=mesh(new T.BoxGeometry(gx1-gx0+0.5,0.26,gz1-gz0+0.3),M.trim,true,true);
+  gr.position.set(cx+(gx0+gx1)/2,Y+gh+0.13,cz+(gz0+gz1)/2);G.add(gr);
+  var gf=new T.Mesh(new T.PlaneGeometry(gx1-gx0,gz1-gz0),M.path);
+  gf.rotation.x=-PI/2;gf.position.set(cx+(gx0+gx1)/2,Y+0.03,cz+(gz0+gz1)/2);
+  gf.receiveShadow=true;G.add(gf);
+
+  /* ---- the house: two storeys, holes for the door and every window ---- */
+  var x0=-8.0,x1=5.0,z0=1.0,z1=10.6,H1=3.30,H2=6.40;
+  var W=[];                                             /* the four outer walls */
+  W.push(homeWall(G,M.wall,cx+x0,cz+z0,cx+x1,cz+z0,Y,Y+H2,0.26,   /* street face */
+    [[2.6,3.9,Y+0.9,Y+2.5],[5.2,7.0,Y+0.0,Y+2.45],[8.4,10.2,Y+0.9,Y+2.5],
+     [2.6,4.2,Y+4.1,Y+5.6],[7.6,9.2,Y+4.1,Y+5.6]]));
+  W.push(homeWall(G,M.wall,cx+x1,cz+z0,cx+x1,cz+z1,Y,Y+H2,0.26,   /* garage side */
+    [[3.0,4.8,Y+0.9,Y+2.5],[3.0,4.8,Y+4.1,Y+5.6]]));
+  W.push(homeWall(G,M.wall,cx+x1,cz+z1,cx+x0,cz+z1,Y,Y+H2,0.26,   /* the garden */
+    [[2.0,5.6,Y+0.9,Y+2.6],[8.0,10.0,Y+0.9,Y+2.5],[3.0,4.8,Y+4.1,Y+5.6]]));
+  W.push(homeWall(G,M.wall,cx+x0,cz+z1,cx+x0,cz+z0,Y,Y+H2,0.26,   /* the far side */
+    [[2.2,4.0,Y+0.9,Y+2.5],[6.0,7.6,Y+0.9,Y+2.5],[3.0,4.8,Y+4.1,Y+5.6]]));
+  /* glaze every one of those holes except the doorway */
+  [[0,[[2.6,3.9,0.9,2.5],[8.4,10.2,0.9,2.5],[2.6,4.2,4.1,5.6],[7.6,9.2,4.1,5.6]]],
+   [1,[[3.0,4.8,0.9,2.5],[3.0,4.8,4.1,5.6]]],
+   [2,[[2.0,5.6,0.9,2.6],[8.0,10.0,0.9,2.5],[3.0,4.8,4.1,5.6]]],
+   [3,[[2.2,4.0,0.9,2.5],[6.0,7.6,0.9,2.5],[3.0,4.8,4.1,5.6]]]].forEach(function(q){
+    var w=W[q[0]],bx=[cx+x0,cx+x1,cx+x1,cx+x0][q[0]],bz=[cz+z0,cz+z0,cz+z1,cz+z1][q[0]];
+    q[1].forEach(function(h){
+      homeGlass(G,M.glass,bx,bz,w.ux,w.uz,h[0],h[1],Y+h[2],Y+h[3],w.yaw);
+    });
+  });
+  /* hinged at the jamb: the leaf hangs off a pivot at its edge, so it
+     swings like a door instead of spinning about its own middle */
+  var hinge=new T.Group();
+  hinge.position.set(cx+x0+5.2,Y,cz+z0);G.add(hinge);
+  /* this wall runs along X, so the leaf is 1.2 wide in X and 8 cm thick in
+     Z. Built the other way round it stood across the opening instead of
+     filling it, and swung into the doorway rather than clear of it. */
+  var door=mesh(new T.BoxGeometry(1.8,2.42,0.08),M.wood,true,false);
+  door.position.set(0.9,1.21,0);hinge.add(door);
+  var knob=mesh(new T.SphereGeometry(0.055,8,6),M.steel,false,false);
+  knob.position.set(1.62,1.05,-0.07);hinge.add(knob);
+  HOME.doorMesh=hinge;HOME.doorHit=door;
+  HOME.door={x:cx+x0+6.1,z:cz+z0-1.6};
+
+  /* slabs: the ground floor, the first floor, and the ceiling under the roof */
+  [[Y+0.02,0.10],[Y+H1,0.24]].forEach(function(q){
+    var sl=mesh(new T.BoxGeometry(x1-x0,q[1],z1-z0),M.floor,false,true);
+    sl.position.set(cx+(x0+x1)/2,q[0],cz+(z0+z1)/2);G.add(sl);
+  });
+  /* the stair, as real treads */
+  for(i=0;i<15;i++){
+    var st=mesh(new T.BoxGeometry(1.15,0.14,0.28),M.wood,true,true);
+    st.position.set(cx+x1-1.4,Y+0.18+i*0.212,cz+z1-1.2-i*0.28);G.add(st);
+  }
+  /* partitions: living from kitchen below, two bedrooms above */
+  homeWall(G,M.inner,cx+x0+5.6,cz+z0+0.3,cx+x0+5.6,cz+z1-3.2,Y,Y+H1,0.14,[[3.2,4.2,Y,Y+2.1]]);
+  homeWall(G,M.inner,cx+x0+0.3,cz+z0+5.4,cx+x0+5.4,cz+z0+5.4,Y+H1+0.12,Y+H2,0.14,
+           [[2.0,3.0,Y+H1+0.12,Y+H1+2.2]]);
+  var pitch=mesh(new T.ConeGeometry((x1-x0)*0.76,2.6,4),M.roof,true,true);
+  pitch.rotation.y=PI/4;pitch.scale.set(1,1,(z1-z0)/(x1-x0)*1.18);
+  pitch.position.set(cx+(x0+x1)/2,Y+H2+1.3,cz+(z0+z1)/2);G.add(pitch);
+
+  /* ---- what makes it a home rather than an empty shell ---- */
+  function put(g,m,x,y,z,ry){var o=mesh(g,m,true,true);
+    o.position.set(cx+x,Y+y,cz+z);if(ry)o.rotation.y=ry;G.add(o);return o;}
+  put(roundedBox(2.30,0.78,0.95,0.14,4),M.sofa,-4.6,0.39,4.2);                /* sofa   */
+  put(roundedBox(1.10,0.40,0.62,0.06,3),M.wood,-4.6,0.20,5.9);                /* table  */
+  put(roundedBox(1.20,0.72,0.06,0.02,2),M.trim,-4.6,1.30,2.9);                /* telly  */
+  put(new T.BoxGeometry(3.20,0.90,0.65),M.steel,1.6,0.45,9.9);                /* counter*/
+  put(new T.BoxGeometry(0.70,1.80,0.68),M.steel,-1.0,0.90,9.9);               /* fridge */
+  put(roundedBox(1.40,0.06,0.80,0.02,2),M.wood,2.0,0.76,7.4);                 /* dining */
+  for(i=0;i<4;i++)put(new T.BoxGeometry(0.40,0.76,0.40),M.wood,
+                      1.3+(i%2)*1.4,0.38,7.0+((i/2)|0)*0.9);
+  put(roundedBox(1.45,0.52,2.05,0.10,3),M.sofa,-6.0,H1+0.38,3.4);             /* bed 1  */
+  put(roundedBox(1.45,0.52,2.05,0.10,3),M.sofa,-6.0,H1+0.38,8.6);             /* bed 2  */
+  put(new T.BoxGeometry(1.10,2.10,0.60),M.wood,3.2,H1+1.17,3.0);              /* wardrobe */
+  put(new T.BoxGeometry(1.10,0.50,0.45),M.wood,-2.4,H1+0.37,9.6);             /* desk   */
+  /* the garden: a tree, a bench, a couple of lamps by the door */
+  var tr=treeMesh(1);tr.position.set(cx-Z*0.55,Y,cz-Z*0.45);
+  tr.scale.setScalar(0.62);G.add(tr);
+  put(roundedBox(1.70,0.10,0.50,0.03,2),M.wood,-7.0,0.55,-6.0);
+  [-1,1].forEach(function(s){
+    var lp=mesh(new T.CylinderGeometry(0.06,0.08,1.05,7),M.trim,true,false);
+    lp.position.set(cx+x0+6.1+s*1.75,Y+0.52,cz+z0-1.3);G.add(lp);
+    var bulb=mesh(new T.SphereGeometry(0.11,8,6),
+      new T.MeshStandardMaterial({color:0xfff3d8,emissive:0x6a5a34,emissiveIntensity:0.9}),
+      false,false);
+    bulb.position.set(cx+x0+6.1+s*1.75,Y+1.10,cz+z0-1.3);G.add(bulb);
+    CITY.lit.push(bulb.material);
+  });
+
+  cityG.add(G);
+  /* solid to drive at, but the garage bay stays open so you can put the car
+     away: two boxes either side of it rather than one across the lot */
+  /* Solid to drive at, but you have to be able to WALK IN - and the same
+     list stops the car and the man both. So the house is registered as its
+     four walls with the doorway left out of the front one, not as one slab
+     over the whole footprint. That slab was the invisible thing standing in
+     the door. */
+  var cell=Math.floor(HOME.x/CITY.P)+','+Math.floor(HOME.z/CITY.P);
+  (CITY.cars[cell]||(CITY.cars[cell]=[])).push(
+    {x:cx+x0+2.6,z:cz+z0,hx:2.6,hz:0.35},                    /* front, left of the door  */
+    {x:cx+(x0+7.0+x1)/2,z:cz+z0,hx:(x1-x0-7.0)/2,hz:0.35},   /* front, right of it       */
+    {x:cx+(x0+x1)/2,z:cz+z1,hx:(x1-x0)/2,hz:0.35},           /* back                     */
+    {x:cx+x0,z:cz+(z0+z1)/2,hx:0.35,hz:(z1-z0)/2},           /* the two sides            */
+    {x:cx+x1,z:cz+(z0+z1)/2,hx:0.35,hz:(z1-z0)/2},
+    {x:cx+gx0-0.2,z:cz+(gz0+gz1)/2,hx:0.3,hz:(gz1-gz0)/2},
+    {x:cx+gx1+0.2,z:cz+(gz0+gz1)/2,hx:0.3,hz:(gz1-gz0)/2},
+    {x:cx+(gx0+gx1)/2,z:cz+gz1+0.2,hx:(gx1-gx0)/2,hz:0.3});
+}
+
+
+/* =================================================================
+   INTERIORS — every building in town is hollow, one at a time.
+
+   The city is baked into a handful of merged meshes, which is the only
+   reason 256 blocks of it run at all. Giving all of them floors, stairs
+   and flats at once would be roughly forty times the geometry.
+
+   So the interior of whichever building you are standing next to is
+   built while you stand there, and thrown away when you walk off. One
+   exists at a time, so the cost is a constant rather than a multiple -
+   and every building in the city can be walked into, not a chosen few.
+   ================================================================= */
+var INT={cur:null,g:null,t:0,MAT:null,FLOORS:9};
+window.__INT=INT;          /* a handle to poke at from the console */
+
+function intMaterials(){
+  if(INT.MAT)return INT.MAT;
+  INT.MAT={
+    slab :new T.MeshStandardMaterial({color:0xb9b4aa,roughness:0.94,side:T.DoubleSide}),
+    wall :new T.MeshStandardMaterial({color:0xe6e2da,roughness:0.95,side:T.DoubleSide}),
+    core :new T.MeshStandardMaterial({color:0x9aa0a8,roughness:0.9}),
+    step :new T.MeshStandardMaterial({color:0x8d9299,roughness:0.85}),
+    lobby:new T.MeshStandardMaterial({color:0x2b3038,roughness:0.35,metalness:0.5,
+      envMap:ENV_DAY,envMapIntensity:0.8}),
+    /* a window, not a hole: at 0.9 transmission the whole storey read as
+       open air and you could see the street through every wall */
+    glass:new T.MeshPhysicalMaterial({color:0x9fbecd,roughness:0.08,metalness:0,
+      transmission:0.28,transparent:true,opacity:0.82,side:T.DoubleSide,
+      envMap:ENV_DAY,envMapIntensity:1.0}),
+    door :new T.MeshStandardMaterial({color:0x39414c,roughness:0.4,metalness:0.6,
+      envMap:ENV_DAY,envMapIntensity:0.7}),
+    lamp :new T.MeshStandardMaterial({color:0xfff4de,emissive:0xfff0d0,emissiveIntensity:0.85}),
+    sofa :new T.MeshStandardMaterial({color:0x5b6b7d,roughness:0.9}),
+    wood :new T.MeshStandardMaterial({color:0x7a5638,roughness:0.75})
+  };
+  return INT.MAT;
+}
+
+/* which building is nearest, and near enough to be worth building */
+function intPick(px,pz){
+  var P=CITY.P,bi=Math.floor(px/P),bj=Math.floor(pz/P),di,dj,best=null,bd=1e9;
+  for(di=-1;di<=1;di++)for(dj=-1;dj<=1;dj++){
+    var list=CITY.plans[(bi+di)+','+(bj+dj)];
+    if(!list)continue;
+    for(var k=0;k<list.length;k++){
+      var b=list[k];
+      var ex=Math.max(0,Math.abs(px-b.x)-b.hx),ez=Math.max(0,Math.abs(pz-b.z)-b.hz);
+      var d=Math.hypot(ex,ez);
+      if(d<bd){bd=d;best=b;}
+    }
+  }
+  return bd<26?best:null;
+}
+
+/* a floor slab with the flats laid out on it */
+function intFloor(G,M,b,y,h,first,hole){
+  var hx=b.hx-0.35,hz=b.hz-0.35,i;
+  /* the slab is four pieces around the stairwell, not one sheet: a solid
+     plate over the stair is a ceiling with no way up, which is what this
+     was. `hole` is the void, in world coordinates. */
+  if(hole){
+    [[b.x-hx,hole.x0,b.z-hz,b.z+hz],[hole.x1,b.x+hx,b.z-hz,b.z+hz],
+     [hole.x0,hole.x1,b.z-hz,hole.z0],[hole.x0,hole.x1,hole.z1,b.z+hz]]
+    .forEach(function(r){
+      if(r[1]-r[0]<0.05||r[3]-r[2]<0.05)return;
+      var q=mesh(new T.BoxGeometry(r[1]-r[0],0.22,r[3]-r[2]),M.slab,false,true);
+      q.position.set((r[0]+r[1])/2,y,(r[2]+r[3])/2);G.add(q);
+    });
+  }else{
+    var sl=mesh(new T.BoxGeometry(hx*2,0.22,hz*2),M.slab,false,true);
+    sl.position.set(b.x,y,b.z);G.add(sl);
+  }
+
+  /* The city's facades are single sided - cheap, and right, because you were
+     never meant to be behind one. Standing in here you are, and a building
+     with no walls from the inside is worse than no interior at all. So each
+     floor gets its own lining: solid to the sill, solid from the lintel up,
+     and a band of glass at eye level where the windows are. */
+  [[1,0,hz],[-1,0,hz],[0,1,hx],[0,-1,hx]].forEach(function(e){
+    [[0.02,0.85],[2.25,h-0.05]].forEach(function(r){
+      var w=mesh(new T.BoxGeometry(e[0]?0.12:e[2]*2,r[1]-r[0],e[0]?e[2]*2:0.12),
+                 M.wall,false,true);
+      w.position.set(b.x+e[0]*hx,y+(r[0]+r[1])/2,b.z+e[1]*hz);G.add(w);
+    });
+    var gl=mesh(new T.BoxGeometry(e[0]?0.06:e[2]*2,1.05,e[0]?e[2]*2:0.06),
+                M.glass,false,false);
+    gl.position.set(b.x+e[0]*hx,y+1.55,b.z+e[1]*hz);G.add(gl);
+  });
+  if(first)return;                                   /* the lobby has no flats */
+  /* split the plate into flats around a corridor: one cross wall, and
+     partitions off it, which is how a floor plate actually divides */
+  var alongX=hx>hz;
+  var cw=mesh(new T.BoxGeometry(alongX?hx*2:0.16,h-0.3,alongX?0.16:hz*2),M.wall,false,false);
+  cw.position.set(b.x,y+h/2,b.z);G.add(cw);
+  var n=Math.max(2,Math.round((alongX?hx:hz)/3.4));
+  for(i=1;i<n;i++){
+    var t=-1+2*i/n;
+    [-1,1].forEach(function(s){
+      var pw=mesh(new T.BoxGeometry(alongX?0.14:hx,h-0.3,alongX?hz:0.14),M.wall,false,false);
+      if(alongX)pw.position.set(b.x+t*hx,y+h/2,b.z+s*hz/2);
+      else pw.position.set(b.x+s*hx/2,y+h/2,b.z+t*hz);
+      G.add(pw);
+    });
+  }
+  /* something in the flats, so they read as lived in rather than as cells */
+  for(i=0;i<n;i++){
+    var fx=b.x+(alongX?(-1+2*(i+0.5)/n)*hx:hx*0.5),
+        fz=b.z+(alongX?hz*0.5:(-1+2*(i+0.5)/n)*hz);
+    var so=mesh(roundedBox(1.9,0.66,0.8,0.12,3),M.sofa,false,false);
+    so.position.set(fx,y+0.44,fz);G.add(so);
+    var tb=mesh(new T.BoxGeometry(0.9,0.06,0.6),M.wood,false,false);
+    tb.position.set(fx,y+0.62,fz+1.3);G.add(tb);
+    var lp=mesh(new T.SphereGeometry(0.13,7,5),M.lamp,false,false);
+    lp.position.set(fx,y+h-0.35,fz);G.add(lp);
+  }
+}
+
+function intBuild(b){
+  var M=intMaterials(),G=new T.Group(),i;
+  var house=(b.s<0),H=0.16+b.h,fh=house?2.8:3.2;
+  var floors=Math.min(INT.FLOORS,Math.max(1,Math.floor((H-0.5)/fh)));
+
+  /* the stair core, in the corner, with real treads between the plates */
+  var sx=b.x+(b.hx-1.5)*0.82,sz=b.z+(b.hz-1.5)*0.82;
+  /* the flight runs from sz-0.9 to sz+1.2; the void above it is that plus a
+     landing, so you come up through the slab instead of into it */
+  INT.stair={x0:sx-0.62,x1:sx+0.62,z0:sz-1.0,z1:sz+1.3};
+  INT.fh=fh;INT.floors=floors;INT.base=0.16;INT.box=b;
+  var hole={x0:sx-0.75,x1:sx+0.75,z0:sz-1.15,z1:sz+1.45};
+
+  for(i=0;i<floors;i++)intFloor(G,M,b,0.16+i*fh,fh,i===0,i?hole:null);
+
+  if(!house){
+    var core=mesh(new T.BoxGeometry(2.6,floors*fh,0.14),M.core,false,false);
+    core.position.set(sx,0.16+floors*fh/2,sz+1.3);G.add(core);
+  }
+  for(i=0;i<floors-1;i++)for(var k=0;k<12;k++){
+    var st=mesh(new T.BoxGeometry(1.1,0.11,0.24),M.step,false,false);
+    st.position.set(sx,0.16+i*fh+0.16+k*(fh/12),sz-0.9+k*0.19);G.add(st);
+  }
+
+  /* the way in: a recessed porch on the street side, glass and a door,
+     with the lobby lit behind it - that is what tells you from across the
+     road that a building is a building and not a block of texture */
+  var P=CITY.P,cx=(Math.floor(b.x/P)+0.5)*P,cz=(Math.floor(b.z/P)+0.5)*P;
+  var nx=0,nz=0;
+  if(Math.abs(b.x-cx)/Math.max(0.01,b.hx)>Math.abs(b.z-cz)/Math.max(0.01,b.hz))
+       nx=b.x>cx?1:-1; else nz=b.z>cz?1:-1;
+  /* the baked shopfront band stands 0.3 m proud of the footprint, so an
+     entrance flush with the wall is buried inside it and never seen */
+  var ex=b.x+nx*(b.hx+0.44),ez=b.z+nz*(b.hz+0.44),yaw=Math.atan2(nx,nz);
+  var w=house?1.9:Math.min(5.0,(nx?b.hz:b.hx)*1.1),dh=house?2.3:3.0;
+  var front=mesh(new T.BoxGeometry(w,dh,0.10),M.glass,false,false);
+  front.position.set(ex,0.16+dh/2,ez);front.rotation.y=yaw;G.add(front);
+  var door=mesh(new T.BoxGeometry(w*0.42,dh*0.86,0.14),M.door,false,false);
+  door.position.set(ex+nx*0.06,0.16+dh*0.43,ez+nz*0.06);door.rotation.y=yaw;G.add(door);
+  var head=mesh(new T.BoxGeometry(w+0.5,0.34,0.5),M.lobby,true,false);
+  head.position.set(ex,0.16+dh+0.17,ez);head.rotation.y=yaw;G.add(head);
+  if(!house){                                        /* a desk in the lobby */
+    var desk=mesh(roundedBox(2.4,1.05,0.7,0.08,3),M.lobby,false,false);
+    desk.position.set(b.x-nx*2.2,0.68,b.z-nz*2.2);desk.rotation.y=yaw;G.add(desk);
+  }
+  for(i=0;i<2;i++){                                  /* lobby light */
+    var gl=mesh(new T.SphereGeometry(0.17,8,6),M.lamp,false,false);
+    gl.position.set(ex-nx*(1.6+i*2.6)+(nx?0:1.4*(i?1:-1)),0.16+dh-0.35,
+                    ez-nz*(1.6+i*2.6)+(nz?0:1.4*(i?1:-1)));G.add(gl);
+  }
+  return G;
+}
+
+/* Where a man's feet are inside the current building. Without this the
+   stairs are scenery: the walker's height comes from groundAt(), which knows
+   about pavements and nothing else, so he strolls through every tread. */
+INT.floorAt=function(x,z,y){
+  var b=INT.cur;if(!b||!INT.g)return null;
+  if(Math.abs(x-b.x)>b.hx-0.3||Math.abs(z-b.z)>b.hz-0.3)return null;
+  var fh=INT.fh,n=INT.floors,S=INT.stair,base=INT.base;
+  if(S&&x>S.x0&&x<S.x1&&z>S.z0&&z<S.z1){       /* on the flight: ride it */
+    var t=clamp((z-S.z0)/(S.z1-S.z0),0,1);
+    var i=clamp(Math.round((y-base)/fh-t),0,n-2);
+    return base+(i+t)*fh;
+  }
+  return base+clamp(Math.round((y-base)/fh),0,n-1)*fh;
+};
+INT.clear=function(){
+  if(!INT.g)return;
+  INT.g.traverse(function(o){if(o.isMesh)o.geometry.dispose();});
+  cityG.remove(INT.g);INT.g=null;INT.cur=null;
+};
+INT.step=function(dt){
+  INT.t+=dt;if(INT.t<0.35)return;INT.t=0;
+  var px=onFoot()?MAN.x:S.x,pz=onFoot()?MAN.z:S.z;
+  var b=intPick(px,pz);
+  if(b===INT.cur)return;
+  INT.clear();
+  if(!b)return;
+  INT.cur=b;INT.g=intBuild(b);cityG.add(INT.g);
+};
+
+/* where the towers cluster, as a fraction of the half-grid */
+var CORES=[[-0.20,0.14],[0.32,-0.36]];
+/* How far the built-up part reaches in a given direction. The road grid stays
+   square - every junction, lane and turn depends on that - but a city does not
+   stop on a straight line, so past this edge the blocks go green and the town
+   gets an outline instead of a border. A couple of harmonics is all it takes. */
+function builtTo(a){
+  return CITY.N*(0.80+0.17*Math.sin(a*2+0.7)+0.10*Math.sin(a*3-1.9)
+                     +0.05*Math.sin(a*5+2.6));
+}
+function buildCity(){
+  cityMaterials();
+  NPC.STATIC.length=0;NPC.parkLast=null;   /* before anything registers itself */
+  var P=CITY.P,N=CITY.N,Z=CITY.zone,rnd=seeded(20260904),i,j,k;
+  var road=GEO(),pave=GEO(),curb=GEO(),roof=GEO(),store=GEO(),grass=GEO(),
+      hw=GEO(),hr=GEO(),face=[GEO(),GEO(),GEO()];
+  var lampX=[],treeX=[],treeY=[],carX=[],carC=[],sigA=[],sigB=[],acX=[];
+  var pplX=[],pplC=[];
+
+  /* the road surface is one sheet: the tile carries every marking */
+  var HO=(CITY.out+CITY.ext)/2,HL=(CITY.out-CITY.ext)/2;
+  gTop(road,0,0,CITY.ext,CITY.ext,0.02,P,0.5);
+  gTop(road, HO,0,HL,CITY.RH,0.02,P,0.5);
+  gTop(road,-HO,0,HL,CITY.RH,0.02,P,0.5);
+  gTop(road,0, HO,CITY.RH,HL,0.02,P,0.5);
+  gTop(road,0,-HO,CITY.RH,HL,0.02,P,0.5);
+
+  for(i=-N;i<N;i++)for(j=-N;j<N;j++){
+    var cx=(i+0.5)*P,cz=(j+0.5)*P;
+    var d=Math.max(Math.abs(i+0.5),Math.abs(j+0.5));
+    /* Two business districts, not one hill of towers in the middle: a real
+       skyline has a midtown and a downtown with a dip between them, and
+       that dip is most of what you recognise a city by from a distance.
+       Everything is a fraction of N, so it survives resizing the grid. */
+    if(i===HOME.i&&j===HOME.j){buildHome();continue;}   /* that one is yours */
+    var edge=Math.hypot(i+0.5,j+0.5)>builtTo(Math.atan2(j+0.5,i+0.5));
+    var t=1e9;
+    for(k=0;k<CORES.length;k++){
+      var ddx=(i+0.5)-CORES[k][0]*N,ddz=(j+0.5)-CORES[k][1]*N;
+      t=Math.min(t,Math.sqrt(ddx*ddx+ddz*ddz)/(N*0.30));
+    }
+    var park=edge||(rnd()<(t<1?0.03:0.08));
+    var type=park?'park':(t<1.05?'down':(t<2.0?'mid':'res'));
+    var tower=(!park&&t<1.05&&rnd()<0.62-t*0.34);
+    gTop(pave,cx,cz,CITY.pad,CITY.pad,0.16,4);
+    gBox(curb,cx,cz,CITY.pad,CITY.pad,0,0.16,2,0.4);
+
+    /* pavement furniture: lamps at the corners, trees along the kerb */
+    for(k=-1;k<=1;k+=2){
+      lampX.push(new T.Matrix4().makeRotationY(k>0?-PI/2:PI/2)
+        .setPosition(cx-P*0.22,0.16,cz+k*(CITY.pad-1.4)));
+      lampX.push(new T.Matrix4().makeRotationY(k>0?0:PI)
+        .setPosition(cx+k*(CITY.pad-1.4),0.16,cz+P*0.22));
+      /* a lamp post is a steel column, not a puff of air */
+      CITY.posts.push({x:cx-P*0.22,z:cz+k*(CITY.pad-1.4),r:0.28,hard:1},
+                      {x:cx+k*(CITY.pad-1.4),z:cz+P*0.22,r:0.28,hard:1});
+    }
+    for(k=0;k<4;k++){
+      if(rnd()<0.45)continue;
+      var side=k<2?1:-1,along=(rnd()-0.5)*CITY.pad*1.5;
+      var tx=(k%2)?cx+side*(CITY.pad-2.3):cx+along;
+      var tz=(k%2)?cz+along:cz+side*(CITY.pad-2.3);
+      var mt=new T.Matrix4().makeRotationY(rnd()*TAU);
+      var sc=0.5+rnd()*0.28;mt.scale(new T.Vector3(sc,sc,sc));
+      mt.setPosition(tx,0.16,tz);
+      CITY.posts.push({x:tx,z:tz,r:0.34*sc+0.22,hard:0.7});
+      (rnd()<0.5?treeX:treeY).push(mt);
+    }
+    /* people on the pavement. The matrix is a placeholder - NPC.stepPeds
+       writes the real one every frame from where the person has walked to. */
+    for(k=0;k<3;k++){
+      if(rnd()<0.42)continue;
+      NPC.peds.push({bi:i,bj:j,t:rnd()*4,side:0,dir:rnd()<0.5?1:-1,
+        v:NPC.WALK*(0.78+rnd()*0.5),gait:rnd()*TAU,sc:0.94+rnd()*0.12,
+        x:0,z:0,yaw:0,moving:true,cross:null,down:0,fall:0,kx:0,kz:0});
+      pplX.push(new T.Matrix4());
+      pplC.push(new T.Color().setHSL(rnd(),0.25+rnd()*0.45,0.28+rnd()*0.40));
+    }
+
+    /* parked cars against the kerb, pointing with the traffic */
+    for(k=0;k<4;k++){
+      if(rnd()<0.62)continue;
+      var run=2+((rnd()*2)|0),from=(rnd()-0.4)*(P*0.4);
+      for(var q=0;q<run;q++){
+        var off=from+q*5.7,yaw,px,pz;
+        if(Math.abs(off)>CITY.pad-3.2)continue;
+        if(k<2){                                   /* kerb of an east-west street */
+          var zs=k?1:-1;
+          pz=cz+zs*(P/2-CITY.BAY);px=cx+off;yaw=zs>0?-PI/2:PI/2;
+        }else{                                     /* kerb of a north-south avenue */
+          var xs=(k===2)?1:-1;
+          px=cx+xs*(P/2-CITY.BAY);pz=cz+off;yaw=xs>0?0:PI;
+        }
+        carX.push(new T.Matrix4().makeRotationY(yaw).setPosition(px,0,pz));
+        carC.push(new T.Color().setHSL(rnd(),0.06+rnd()*0.38,0.20+rnd()*0.42));
+        var cell=Math.floor(px/P)+','+Math.floor(pz/P);
+        (CITY.cars[cell]||(CITY.cars[cell]=[])).push(
+          {x:px,z:pz,hx:(k<2)?2.2:0.95,hz:(k<2)?0.95:2.2});
+      }
+    }
+
+    if(park){
+      gTop(grass,cx,cz,Z+1.6,Z+1.6,0.17,10);
+      for(k=0;k<16;k++){
+        var a=new T.Matrix4().makeRotationY(rnd()*TAU),s2=0.5+rnd()*0.45;
+        a.scale(new T.Vector3(s2,s2,s2));
+        a.setPosition(cx+(rnd()-0.5)*Z*1.8,0.17,cz+(rnd()-0.5)*Z*1.8);
+        (rnd()<0.5?treeX:treeY).push(a);
+      }
+      CITY.parks.push([cx,cz]);
+      continue;
+    }
+
+    var plan=blockPlan(type,rnd,tower);
+    var bx0=1e9,bx1=-1e9,bz0=1e9,bz1=-1e9;
+    plan.forEach(function(b){
+      var x=cx+b.x,z=cz+b.z;
+      bx0=Math.min(bx0,x-b.hx);bx1=Math.max(bx1,x+b.hx);
+      bz0=Math.min(bz0,z-b.hz);bz1=Math.max(bz1,z+b.hz);
+      if(b.s<0){                                   /* a house with a pitched roof */
+        var wallH=0.16+b.h,ex=b.hx+0.4,ez=b.hz+0.4,rh=1.4+b.hz*0.35;
+        gBox(hw,x,z,b.hx,b.hz,0.16,wallH,8,8);
+        gFace(hr,[[x+ex,wallH,z-ez],[x-ex,wallH,z-ez],[x-ex,wallH+rh,z],[x+ex,wallH+rh,z]],
+              [0,0, 2*ex/3,0, 2*ex/3,ez/2, 0,ez/2]);
+        gFace(hr,[[x-ex,wallH,z+ez],[x+ex,wallH,z+ez],[x+ex,wallH+rh,z],[x-ex,wallH+rh,z]],
+              [0,0, 2*ex/3,0, 2*ex/3,ez/2, 0,ez/2]);
+        gFace(hw,[[x+b.hx,wallH,z+b.hz],[x+b.hx,wallH,z-b.hz],[x+b.hx,wallH+rh,z]],
+              [0,0, 0.10,0, 0.05,0.10]);
+        gFace(hw,[[x-b.hx,wallH,z-b.hz],[x-b.hx,wallH,z+b.hz],[x-b.hx,wallH+rh,z]],
+              [0,0, 0.10,0, 0.05,0.10]);
+        return;
+      }
+      var base=4.36,fs=face[b.s];
+      var top=base+Math.max(2,Math.round((0.16+b.h-base)/3.2))*3.2;
+      gBox(store,x,z,b.hx+0.3,b.hz+0.3,0.16,base,8,4.2);
+      gTop(roof,x,z,b.hx+0.3,b.hz+0.3,base,8);
+      if(b.h>52){                                  /* a setback, so towers taper */
+        var mid=base+Math.round((top-base)*0.62/3.2)*3.2;
+        gBox(fs,x,z,b.hx,b.hz,base,mid,25.6,25.6);
+        gTop(roof,x,z,b.hx,b.hz,mid,8);
+        var sh=Math.max(3.2,Math.round(b.hx*0.72/1.6)*1.6),sd=Math.max(3.2,Math.round(b.hz*0.72/1.6)*1.6);
+        gBox(fs,x,z,sh,sd,mid,top,25.6,25.6);
+        gBox(roof,x,z,sh+0.3,sd+0.3,top,top+0.7,8,3);
+        gTop(roof,x,z,sh+0.3,sd+0.3,top+0.7,8);
+        acX.push([x,z,top+0.7,sh*0.9]);
+      }else{
+        gBox(fs,x,z,b.hx,b.hz,base,top,25.6,25.6);
+        gBox(roof,x,z,b.hx+0.3,b.hz+0.3,top,top+0.7,8,3);
+        gTop(roof,x,z,b.hx+0.3,b.hz+0.3,top+0.7,8);
+        if(b.h>12)acX.push([x,z,top+0.7,b.hx*1.1]);
+      }
+    });
+    /* the footprints are what the interior builder needs later; the plan
+       itself is thrown away the moment the block is baked */
+    if(plan.length)CITY.plans[i+','+j]=plan.map(function(b){
+      return {x:cx+b.x,z:cz+b.z,hx:b.hx,hz:b.hz,h:b.h,s:b.s};});
+    if(plan.length)CITY.solid[i+','+j]={x:(bx0+bx1)/2,z:(bz0+bz1)/2,
+      hx:(bx1-bx0)/2,hz:(bz1-bz0)/2};
+  }
+
+  /* traffic signals on the inner junctions */
+  for(i=-CITY.SIG;i<=CITY.SIG;i++)for(j=-CITY.SIG;j<=CITY.SIG;j++){
+    var jx=i*P,jz=j*P;
+    sigA.push(new T.Matrix4().makeRotationY(PI).setPosition(jx+CITY.RH+1.6,0,jz+CITY.RH+1.6));
+    sigB.push(new T.Matrix4().makeRotationY(PI/2).setPosition(jx-CITY.RH-1.6,0,jz+CITY.RH+1.6));
+  }
+
+  gBake(road,CMAT.road,false,true);
+  gBake(pave,CMAT.pave,false,true);
+  gBake(curb,CMAT.curb,false,true);
+  gBake(grass,CMAT.grass,false,true);
+  gBake(roof,CMAT.roof,true,true);
+  gBake(store,CMAT.store,true,true);
+  gBake(hw,CMAT.house,true,true);
+  gBake(hr,CMAT.tile,true,true);
+  for(i=0;i<3;i++)gBake(face[i],CMAT.face[i],true,true);
+
+  /* rooftop plant, instanced */
+  var ac=new T.Group();
+  var acBox=mesh(roundedBox(2.4,1.5,2.4,0.12,4),CMAT.roof,true,false);
+  acBox.position.y=0.75;ac.add(acBox);
+  var acM=[];
+  acX.forEach(function(q){
+    for(var t=0;t<2;t++){
+      var m2=new T.Matrix4().makeRotationY(rnd()*TAU);
+      var s3=0.6+rnd()*0.8;m2.scale(new T.Vector3(s3,s3,s3));
+      m2.setPosition(q[0]+(rnd()-0.5)*q[3],q[2],q[1]+(rnd()-0.5)*q[3]);
+      acM.push(m2);
+    }
+  });
+  /* rooftop plant is only ever seen from close to, street furniture a bit
+     further; nothing here is worth drawing from the far side of town */
+  cullable(instancePack(ac,acM,{to:cityG}),acM,120);
+  cullable(instancePack(lampPost(),lampX,{to:cityG,cast:false}),lampX,170);
+  cullable(instancePack(treeMesh(0),treeX,{to:cityG}),treeX,180);
+  cullable(instancePack(treeMesh(1),treeY,{to:cityG}),treeY,180);
+  /* the parked cars keep their matrices so they can be culled by distance
+     like everything else - static does not mean it has to be drawn */
+  cullable(instancePack(npcCar('park'),carX,{to:cityG,tint:{body:carC}}),carX);
+  instancePack(signalHead('A'),sigA,{to:cityG,cast:false});
+  instancePack(signalHead('B'),sigB,{to:cityG,cast:false});
+  applySignals();
+
+  /* ---- the two crowds that are not scenery ---- */
+  NPC.peds.forEach(function(p){p.side=Math.floor(p.t);});
+  var pedProto=A.person({});
+  npcTagLimbs(pedProto);NPC.bakeGait(pedProto);
+  NPC.pedPack=instancePack(pedProto.g,pplX,{to:cityG,tint:pplC});
+  NPC.spawn(rnd);
+  var trafX=[],trafC=[],trafS=[],bikeX=[],bikeC=[],bikeS=[];
+  NPC.cars.forEach(function(c){
+    var X=c.bike?bikeX:trafX,C=c.bike?bikeC:trafC,B=c.bike?bikeS:trafS;
+    c.slot=X.length;
+    X.push(new T.Matrix4());
+    C.push(new T.Color().setHSL(rnd(),0.14+rnd()*0.50,0.24+rnd()*0.44));
+    B.push(new T.Color().setHSL(rnd(),0.22+rnd()*0.42,0.30+rnd()*0.42));
+  });
+  NPC.carPack=instancePack(npcCar('drive'),trafX,{to:cityG,tint:{body:trafC,shirt:trafS}});
+  NPC.bikePack=instancePack(npcBike(),bikeX,{to:cityG,tint:{body:bikeC,shirt:bikeS}});
+  NPC.write();
+
+  /* ---- the sea, west of town ----------------------------------------
+     Beyond the last road out, so no junction, lane or block has to know it
+     is there: a strip of sand, then water to the horizon. It is what makes
+     the place read as a city on a coast rather than a grid in a field. */
+  var SAND0=CITY.out+20,SAND1=CITY.out+150,SEA=2400;
+  var sand=new T.Mesh(new T.PlaneGeometry(SAND1-SAND0,SEA*2),CMAT.sand);
+  sand.rotation.x=-PI/2;sand.position.set(-(SAND0+SAND1)/2,0.06,0);
+  sand.receiveShadow=true;cityG.add(sand);
+  var sea=new T.Mesh(new T.PlaneGeometry(SEA-SAND1,SEA*2),CMAT.sea);
+  sea.rotation.x=-PI/2;sea.position.set(-(SAND1+SEA)/2,0.03,0);
+  cityG.add(sea);
+
+  /* a fountain in the first park */
+  if(CITY.parks.length){
+    var f=new T.Group(),fp=CITY.parks[0];
+    var basin=mesh(new T.CylinderGeometry(4.6,4.8,0.7,26),CMAT.curb,true,true);
+    basin.position.y=0.35;f.add(basin);
+    var wsurf=mesh(new T.CylinderGeometry(4.3,4.3,0.06,26),CMAT.water,false,true);
+    wsurf.position.y=0.62;f.add(wsurf);
+    var stem=mesh(new T.CylinderGeometry(0.28,0.5,2.1,14),CMAT.curb,true,false);
+    stem.position.y=1.6;f.add(stem);
+    var bowl=mesh(new T.CylinderGeometry(1.5,0.4,0.35,18),CMAT.curb,true,false);
+    bowl.position.y=2.75;f.add(bowl);
+    f.position.set(fp[0],0.17,fp[1]);cityG.add(f);
+  }
+}
+
+/* ---- where the tarmac is ----------------------------------------- */
+function cityRoadDist(x,z){
+  var P=CITY.P,E=CITY.ext,O=CITY.out,N=CITY.N,d=1e9;
+  var ix=Math.round(x/P),jz=Math.round(z/P);
+  if(Math.abs(ix)<=N&&Math.abs(z)<=E)d=Math.min(d,Math.abs(x-ix*P));   /* avenue */
+  if(Math.abs(jz)<=N&&Math.abs(x)<=E)d=Math.min(d,Math.abs(z-jz*P));   /* street */
+  if(Math.abs(x)>E&&Math.abs(x)<=O)d=Math.min(d,Math.abs(z));          /* way out */
+  if(Math.abs(z)>E&&Math.abs(z)<=O)d=Math.min(d,Math.abs(x));
+  return d;
+}
+function cityProbe(){
+  var d=cityRoadDist(S.x,S.z);
+  var pad=Math.max(Math.abs(S.x),Math.abs(S.z))<=CITY.ext;
+  S.onRoad=d<CITY.RH+0.4;
+  S.gripT=S.onRoad?1.0:(pad?0.80:0.60);
+  S.lateral=d;S.wrong=false;
+}
+/* solid stuff: slide along it instead of driving through it */
+/* bleed off the speed into a surface whose outward normal is (nx,nz), and
+   keep whatever runs along it - that is what turns a wall into a slide */
+/* Everything that hits the car adds to this, and it shows: smoke off the
+   bonnet, and an engine that will not pull like it did. A crash you can
+   drive away from unchanged is not a crash. */
+var DMG=0,dmgSmoke=0,_lastHit=0;
+function hurt(v,scale){
+  if(v<2.2)return;                       /* a scrape is not a shunt */
+  DMG=Math.min(1,DMG+Math.min(0.22,(v-2.2)*0.016*(scale||1)));
+  camShake=Math.min(0.45,camShake+v*0.010);
+  for(var i=0;i<Math.min(9,2+v*0.4);i++)
+    DUST.spawn(S.x+(Math.random()-0.5)*2.2,0.5+Math.random()*0.7,
+               S.z+(Math.random()-0.5)*2.2,
+               (Math.random()-0.5)*5,(Math.random()-0.5)*5,0.5+Math.random()*0.7);
+}
+function stepDamage(dt){
+  if(DMG<=0.32)return;
+  dmgSmoke+=dt;
+  var rate=0.07/(0.25+DMG);
+  while(dmgSmoke>rate){
+    dmgSmoke-=rate;
+    DUST.spawn(S.x+Math.sin(S.yaw)*1.9,0.85,S.z+Math.cos(S.yaw)*1.9,
+               (Math.random()-0.5)*1.2,(Math.random()-0.5)*1.2,0.7+DMG*1.4);
+  }
+}
+function slideOff(nx,nz,keep){
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw);
+  var wx=S.vx*sy+S.vy*cy,wz=S.vx*cy-S.vy*sy;
+  var vn=wx*nx+wz*nz;                      /* n points away from the obstacle */
+  if(vn>=0)return 0;
+  wx-=vn*nx;wz-=vn*nz;wx*=keep;wz*=keep;
+  S.vx=wx*sy+wz*cy;S.vy=wx*cy-wz*sy;S.r*=0.55;
+  camShake=Math.min(0.30,Math.abs(vn)*0.028);
+  return -vn;                              /* how hard, for the damage model */
+}
+function pushOut(bx,bz,hx,hz,keep){
+  var R=1.15,px=(hx+R)-Math.abs(S.x-bx),pz=(hz+R)-Math.abs(S.z-bz);
+  if(px<=0||pz<=0)return false;
+  var nx=0,nz=0;
+  if(px<pz){nx=S.x<bx?-1:1;S.x=bx+nx*(hx+R);}
+  else{nz=S.z<bz?-1:1;S.z=bz+nz*(hz+R);}
+  _lastHit=slideOff(nx,nz,keep);
+  return true;
+}
+/* round things: posts, trees, trunks. Returns how hard it was hit, so the
+   caller can decide whether that counts as damage. */
+function pushRound(cx,cz,r,keep){
+  var dx=S.x-cx,dz=S.z-cz,R=r+1.15;
+  if(Math.abs(dx)>R||Math.abs(dz)>R)return 0;
+  var d=Math.sqrt(dx*dx+dz*dz);
+  if(d>R)return 0;
+  if(d<1e-3){dx=1;dz=0;d=1;}
+  var nx=dx/d,nz=dz/d;
+  S.x=cx+nx*R;S.z=cz+nz*R;
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw);
+  var wx=S.vx*sy+S.vy*cy,wz=S.vx*cy-S.vy*sy;
+  var vn=wx*nx+wz*nz;
+  slideOff(nx,nz,keep);
+  return vn<0?-vn:0;
+}
+/* the mountains are rock in both worlds: you stop at the foot of one */
+function hillCollide(){
+  for(var i=0;i<HILLS.length;i++){
+    var h=HILLS[i],dx=S.x-h.x,dz=S.z-h.z,R=h.r+1.15;
+    if(Math.abs(dx)>R||Math.abs(dz)>R)continue;
+    var d=Math.sqrt(dx*dx+dz*dz);
+    if(d>R)continue;
+    if(d<1e-3){dx=1;dz=0;d=1;}
+    var nx=dx/d,nz=dz/d;
+    S.x=h.x+nx*R;S.z=h.z+nz*R;
+    hurt(slideOff(nx,nz,0.80),1.6);        /* rock does not give */
+    return;
+  }
+}
+function cityCollide(){
+  var P=CITY.P,bi=Math.floor(S.x/P),bj=Math.floor(S.z/P),di,dj,list,k;
+  var B=CITY.solid[bi+','+bj];
+  if(B&&pushOut(B.x,B.z,B.hx,B.hz,0.84))hurt(_lastHit,1.5);   /* a wall is a wall */
+  for(di=-1;di<=1;di++)for(dj=-1;dj<=1;dj++){
+    list=CITY.cars[(bi+di)+','+(bj+dj)];
+    if(!list)continue;
+    for(k=0;k<list.length;k++)
+      if(Math.abs(S.x-list[k].x)<8&&Math.abs(S.z-list[k].z)<8&&
+         pushOut(list[k].x,list[k].z,list[k].hx,list[k].hz,0.90))hurt(_lastHit,1.1);
+  }
+  /* moving traffic is solid too, and stalls for a moment when it is hit */
+  var sp=Math.abs(S.vx);
+  for(k=0;k<NPC.cars.length;k++){
+    var c=NPC.cars[k];
+    if(c.idle||Math.abs(S.x-c.x)>8||Math.abs(S.z-c.z)>8)continue;
+    var alongX=Math.abs(Math.sin(c.yaw))>0.7,hl=c.bike?1.15:2.3,hw=c.bike?0.5:1.0;
+    if(pushOut(c.x,c.z,alongX?hl:hw,alongX?hw:hl,0.86)){
+      c.hit=1.1;hurt(Math.abs(sp-c.v)*0.9,1.0);
+    }
+  }
+  /* lamp posts and tree trunks: you do not drive through those either */
+  for(k=0;k<CITY.posts.length;k++){
+    var o=CITY.posts[k];
+    if(Math.abs(S.x-o.x)>4||Math.abs(S.z-o.z)>4)continue;
+    hurt(pushRound(o.x,o.z,o.r,0.55)*o.hard,1.3);
+  }
+  /* and people. Hit one at any speed and he goes down and stays down. */
+  for(k=0;k<NPC.peds.length;k++){
+    var q=NPC.peds[k];
+    if(q.idle||q.down>0||Math.abs(S.x-q.x)>3||Math.abs(S.z-q.z)>3)continue;
+    var v=pushRound(q.x,q.z,0.42,0.94);
+    if(v>0.6||sp>1.4){
+      q.down=2.6+Math.random()*1.4;q.fall=0.05;
+      var dx=q.x-S.x,dz=q.z-S.z,dl=Math.hypot(dx,dz)||1;
+      var push=Math.min(6.5,1.2+sp*0.55);
+      q.kx=dx/dl*push;q.kz=dz/dl*push;
+      hurt(sp*0.5,0.35);
+    }
+  }
+}
+function cityRespawn(){
+  var P=CITY.P,nx=Math.round(S.x/P)*P,nz=Math.round(S.z/P)*P;
+  var lim=CITY.ext-6,yaw;
+  if(Math.abs(S.x-nx)<=Math.abs(S.z-nz)){
+    yaw=(Math.cos(S.yaw)>=0)?0:PI;
+    resetCar(clamp(nx,-lim,lim)+(yaw===0?-4.2:4.2),clamp(S.z,-lim,lim),yaw);
+  }else{
+    yaw=(Math.sin(S.yaw)>=0)?PI/2:-PI/2;
+    resetCar(clamp(S.x,-lim,lim),clamp(nz,-lim,lim)+(yaw>0?4.2:-4.2),yaw);
+  }
+}
+/* click the front door to open or shut it. One raycast, only when there is
+   a door to hit and only when the click was not a drag of the camera. */
+var _doorRay=new T.Raycaster(),_doorPt=new T.Vector2(),_dnX=0,_dnY=0;
+renderer.domElement.addEventListener('pointerdown',function(e){_dnX=e.clientX;_dnY=e.clientY;});
+renderer.domElement.addEventListener('pointerup',function(e){
+  if(!HOME.doorHit||MODE!=='city')return;
+  if(Math.abs(e.clientX-_dnX)>6||Math.abs(e.clientY-_dnY)>6)return;   /* that was a drag */
+  var r=renderer.domElement.getBoundingClientRect();
+  _doorPt.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  _doorRay.setFromCamera(_doorPt,camera);
+  if(_doorRay.intersectObject(HOME.doorHit,true).length)toggleDoor();
+});
+function paintCity(x,w){
+  var sc=w/(CITY.ext*2.30),C=w/2,k=w/316,i;
+  function X(v){return C+v*sc;}
+  function Y(v){return C+v*sc;}
+  x.clearRect(0,0,w,w);
+  x.fillStyle='rgba(255,255,255,.05)';
+  x.fillRect(X(-CITY.ext),Y(-CITY.ext),CITY.ext*2*sc,CITY.ext*2*sc);
+  x.lineCap='butt';
+  x.strokeStyle='rgba(255,255,255,.24)';x.lineWidth=Math.max(1.6,CITY.RH*2*sc);
+  x.beginPath();
+  for(i=-CITY.N;i<=CITY.N;i++){
+    var lim=i?CITY.ext:CITY.out;
+    x.moveTo(X(i*CITY.P),Y(-lim));x.lineTo(X(i*CITY.P),Y(lim));
+    x.moveTo(X(-lim),Y(i*CITY.P));x.lineTo(X(lim),Y(i*CITY.P));
+  }
+  x.stroke();
+  x.fillStyle='rgba(40,224,160,.20)';
+  for(i=0;i<CITY.parks.length;i++){
+    var p=CITY.parks[i],h=CITY.zone*sc;
+    x.fillRect(X(p[0])-h,Y(p[1])-h,h*2,h*2);
+  }
+  x.save();x.translate(X(S.x),Y(S.z));carArrow(x,k);x.restore();
+}
+
+/* =================================================================
+   SKID MARKS + DUST
+   ================================================================= */
+var SKID=(function(){
+  var MAXQ=900,pos=new Float32Array(MAXQ*18),alp=new Float32Array(MAXQ*6);
+  var g=new T.BufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(pos,3));
+  g.setAttribute('aAlpha',new T.BufferAttribute(alp,1));
+  var m=new T.ShaderMaterial({transparent:true,depthWrite:false,
+    uniforms:{uColor:{value:new T.Color(0x141619)}},
+    vertexShader:'attribute float aAlpha;varying float vA;void main(){vA=aAlpha;'+
+      'gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader:'uniform vec3 uColor;varying float vA;void main(){'+
+      'if(vA<=0.002)discard;gl_FragColor=vec4(uColor,vA*0.6);}'});
+  var mm=new T.Mesh(g,m);mm.frustumCulled=false;mm.renderOrder=1;scene.add(mm);
+  var head=0,last={};
+  function quad(i,ax,az,bx,bz,cx,cz,dx,dz,a){
+    var o=i*18,y=0.030,k;
+    var P=[ax,y,az, bx,y,bz, cx,y,cz,  ax,y,az, cx,y,cz, dx,y,dz];
+    for(k=0;k<18;k++)pos[o+k]=P[k];
+    for(k=0;k<6;k++)alp[i*6+k]=a;
+  }
+  return {
+    add:function(key,x,z,dx,dz,w,a){
+      var L=last[key],nx=-dz*w,nz=dx*w;
+      if(L){
+        quad(head,L.x+L.nx,L.z+L.nz, L.x-L.nx,L.z-L.nz, x-nx,z-nz, x+nx,z+nz, a);
+        head=(head+1)%MAXQ;
+        g.attributes.position.needsUpdate=true;
+        g.attributes.aAlpha.needsUpdate=true;
+      }
+      last[key]={x:x,z:z,nx:nx,nz:nz};
+    },
+    lift:function(key){delete last[key];},
+    clear:function(){alp.fill(0);head=0;last={};g.attributes.aAlpha.needsUpdate=true;}
+  };
+})();
+
+var DUST=(function(){
+  var MAX=300,i;
+  var pos=new Float32Array(MAX*3),life=new Float32Array(MAX),siz=new Float32Array(MAX),vel=[];
+  for(i=0;i<MAX;i++)vel.push(new T.Vector3());
+  var g=new T.BufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(pos,3));
+  g.setAttribute('aLife',new T.BufferAttribute(life,1));
+  g.setAttribute('aSize',new T.BufferAttribute(siz,1));
+  var spr=(function(){
+    var c=cvs(64,64),x=c.getContext('2d');
+    var gr=x.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,'rgba(255,255,255,.95)');gr.addColorStop(0.45,'rgba(255,255,255,.40)');
+    gr.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=gr;x.fillRect(0,0,64,64);
+    return tex(c,1,1,false);
+  })();
+  var m=new T.ShaderMaterial({transparent:true,depthWrite:false,
+    uniforms:{uMap:{value:spr},uColor:{value:new T.Color(0xcfc8b6)},
+              uPix:{value:renderer.getPixelRatio()}},
+    vertexShader:'attribute float aLife;attribute float aSize;varying float vL;uniform float uPix;'+
+      'void main(){vL=aLife;vec4 mv=modelViewMatrix*vec4(position,1.0);'+
+      'gl_PointSize=aSize*(0.4+(1.0-aLife)*1.6)*uPix*300.0/max(-mv.z,1.0);'+
+      'gl_Position=projectionMatrix*mv;}',
+    fragmentShader:'uniform sampler2D uMap;uniform vec3 uColor;varying float vL;'+
+      'void main(){if(vL<=0.0)discard;vec4 t=texture2D(uMap,gl_PointCoord);'+
+      'gl_FragColor=vec4(uColor,t.a*vL*0.5);}'});
+  var pts=new T.Points(g,m);pts.frustumCulled=false;scene.add(pts);
+  var head=0;
+  return {
+    spawn:function(x,y,z,vx,vz,size){
+      pos[head*3]=x;pos[head*3+1]=y;pos[head*3+2]=z;
+      vel[head].set(vx*0.3+(Math.random()-0.5)*1.8,0.6+Math.random()*1.2,vz*0.3+(Math.random()-0.5)*1.8);
+      life[head]=1;siz[head]=size*(0.7+Math.random()*0.7);
+      head=(head+1)%MAX;
+    },
+    step:function(dt){
+      for(var i=0;i<MAX;i++){
+        if(life[i]<=0)continue;
+        life[i]-=dt*0.6;
+        pos[i*3]+=vel[i].x*dt;pos[i*3+1]+=vel[i].y*dt;pos[i*3+2]+=vel[i].z*dt;
+        vel[i].multiplyScalar(Math.max(0,1-dt*1.5));vel[i].y+=dt*0.3;
+      }
+      g.attributes.position.needsUpdate=true;
+      g.attributes.aLife.needsUpdate=true;
+      g.attributes.aSize.needsUpdate=true;
+    },
+    clear:function(){life.fill(0);g.attributes.aLife.needsUpdate=true;}
+  };
+})();
+
+/* =================================================================
+   VEHICLE
+   ================================================================= */
+var M=1420, IZ=1950;
+var LF=CAR.axF, LR=-CAR.axR, L=LF+LR;
+var CGH=0.42, CFRONT=118000, CREAR=170000;
+var DRAG=0.38, ROLL=9.5, BRAKE=15500, PMAX=316000, FMAX=10600;
+var GEARS=[0,52,88,124,163,205,252];
+
+var S={x:0,z:0,yaw:0,vx:0,vy:0,r:0,steer:0,throttle:0,brake:0,
+  ax:0,ay:0,rpm:900,gear:1,onRoad:true,grip:1,gripT:1,lateral:0,slide:0,slipF:0,slipR:0,
+  idx:0,laps:0,lapT:0,best:0,started:false,wrong:false,
+  dist:0,drive:0,top:0};
+var state={lights:false,night:false,sound:false,cam:0};
+var MODE='city',ASSIST=true,SAVED={track:null,city:null};
+var car,carRig,wheels,steerables,IT=null;
+
+function resetCar(x,z,yaw){
+  S.x=x;S.z=z;S.yaw=yaw;
+  S.vx=S.vy=S.r=S.steer=S.ax=S.ay=0;S.rpm=900;
+  carRig.position.set(S.x,0,S.z);carRig.rotation.y=S.yaw;
+  car.rotation.set(0,0,0);car.position.y=0;
+  SKID.clear();DUST.clear();
+}
+function placeOnTrack(i){
+  var p=TRACK.pts[i],t=TRACK.tan[i];
+  resetCar(p.x,p.z,Math.atan2(t.x,t.z));
+  S.idx=i;lastIdx=i;S.lapT=0;S.started=false;
+}
+function trackProbe(){
+  var N=TRACK.N,best=S.idx,bd=1e9,i,j,p,d;
+  for(i=-26;i<=26;i++){
+    j=(S.idx+i+N)%N;p=TRACK.pts[j];
+    d=(p.x-S.x)*(p.x-S.x)+(p.z-S.z)*(p.z-S.z);
+    if(d<bd){bd=d;best=j;}
+  }
+  S.idx=best;
+  var n=TRACK.nrm[best],p2=TRACK.pts[best],t=TRACK.tan[best];
+  S.lateral=(S.x-p2.x)*n.x+(S.z-p2.z)*n.z;
+  S.onRoad=Math.abs(S.lateral)<TRACK.HALF+0.5;
+  S.gripT=S.onRoad?1.0:0.58;
+  S.wrong=((Math.sin(S.yaw)*t.x+Math.cos(S.yaw)*t.z)<-0.25&&Math.abs(S.vx)>4);
+}
+/* a bent car does not pull like a straight one */
+function engineForce(v){return Math.min(FMAX,PMAX/Math.max(Math.abs(v),3.5))*(1-DMG*0.45);}
+
+function stepVehicle(dt){
+  var spd=Math.abs(S.vx);
+  var maxSteer=0.52*(1-0.62*clamp(spd/58,0,1));
+  var want=clamp(input.steer,-1,1)*maxSteer;
+  S.steer+=(want-S.steer)*Math.min(1,dt*((Math.abs(want)>Math.abs(S.steer))?6.0:11.0));
+
+  S.grip+=(S.gripT-S.grip)*Math.min(1,dt*8);
+
+  var thr=input.gas,brk=0;
+  if(input.back){ if(S.vx>0.6){brk=1;thr=0;} else thr=-0.55; }
+  S.throttle=thr;S.brake=brk;
+
+  var W=M*9.81;
+  var dW=clampAbs(M*S.ax*CGH/L,W*0.34);
+  var loadF=Math.max(700,W*LR/L-dW), loadR=Math.max(700,W*LF/L+dW);
+  var mu=1.52*S.grip;
+
+  var vxs=Math.abs(S.vx)<1.4?1.4*(S.vx<0?-1:1):S.vx, av=Math.abs(vxs);
+  var af=Math.atan2(S.vy+S.r*LF,av)-S.steer*(vxs<0?-1:1);
+  var ar=Math.atan2(S.vy-S.r*LR,av);
+  var Fyf=clampAbs(-CFRONT*af,mu*loadF);
+  var Fyr=clampAbs(-CREAR*ar,mu*loadR*(input.hand?0.34:1));
+
+  var Fx=S.throttle*engineForce(S.vx)
+        -S.brake*BRAKE*(S.vx>0?1:-1)
+        -DRAG*S.vx*Math.abs(S.vx)-ROLL*S.vx
+        -(input.hand?BRAKE*0.40*(S.vx>0?1:-1):0)
+        -(S.onRoad?0:240*(S.vx>0?1:-1));
+  var used=Math.abs(Fyr)/(mu*loadR);
+  if(Fx>0)Fx*=Math.sqrt(Math.max(0.04,1-used*used));   /* friction circle */
+
+  var ax=Fx/M+S.r*S.vy;
+  var ay=(Fyf*Math.cos(S.steer)+Fyr)/M-S.r*S.vx;
+  var rdot=(LF*Fyf*Math.cos(S.steer)-LR*Fyr)/IZ;
+  S.vx+=ax*dt;S.vy+=ay*dt;S.r+=rdot*dt;S.ax=ax;S.ay=ay;
+
+  /* stability net: pulls the yaw rate back to what the front wheels ask for,
+     and bleeds off sideslip. Handbrake turns most of it off, so a deliberate
+     drift still works. */
+  if(ASSIST){
+    var k=input.hand?0.30:1;
+    var ref=clampAbs(S.vx*Math.tan(S.steer)/L,mu*9.81/Math.max(5,Math.abs(S.vx))*1.08);
+    S.r+=(ref-S.r)*Math.min(1,dt*3.6*k);
+    S.vy-=S.vy*Math.min(1,dt*2.0*k);
+  }
+
+  if(Math.abs(S.vx)<1.6){                    /* crawl: kinematic, never wobbles */
+    S.r=lerp(S.r,S.vx*Math.tan(S.steer)/L,Math.min(1,dt*9));
+    S.vy*=Math.max(0,1-dt*6);
+  }
+  if(Math.abs(S.vx)<0.05&&!input.gas&&!input.back){S.vx=0;S.r*=0.8;}
+  S.vx=clamp(S.vx,-16,105);S.vy=clamp(S.vy,-26,26);S.r=clamp(S.r,-2.6,2.6);
+  if(!isFinite(S.vx)||!isFinite(S.vy)||!isFinite(S.r)){S.vx=S.vy=S.r=0;}
+
+  S.yaw+=S.r*dt;
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw);
+  S.x+=(S.vx*sy+S.vy*cy)*dt;
+  S.z+=(S.vx*cy-S.vy*sy)*dt;
+
+  var kmh=Math.abs(S.vx)*3.6,g=1;
+  while(g<GEARS.length-1&&kmh>GEARS[g])g++;
+  S.gear=(S.vx<-0.4)?0:g;
+  var frac=clamp((kmh-GEARS[g-1])/Math.max(1,GEARS[g]-GEARS[g-1]),0,1);
+  var tr=(kmh<1.5)?900+input.gas*2400:900+frac*6600+(S.throttle>0?250:0);
+  S.rpm+=(tr-S.rpm)*Math.min(1,dt*7);
+  S.slipF=Math.abs(af);S.slipR=Math.abs(ar);
+  S.slide=Math.max(0,Math.abs(S.vy)-1.2)*(S.onRoad?1:0.6);
+}
+
+/* =================================================================
+   INPUT
+   ================================================================= */
+var input={steer:0,gas:0,back:0,hand:0,_l:0,_r:0,_g:0,_b:0,_h:0,
+           padSteer:0,padGas:0,padBack:0,padHand:0};
+function onKey(e,down){
+  var k=(e.key||'').toLowerCase();
+  if(down&&(k==='w'||k==='arrowup'))initAudio();
+  if(k==='arrowleft'||k==='a'){input._l=down?1:0;if(down)autoInterrupt();}
+  else if(k==='arrowright'||k==='d'){input._r=down?1:0;if(down)autoInterrupt();}
+  else if(k==='arrowup'||k==='w'){input._g=down?1:0;if(down)autoInterrupt();}
+  else if(k==='arrowdown'||k==='s'){input._b=down?1:0;if(down)autoInterrupt();}
+  else if(k===' '){input._h=down?1:0;if(down)autoInterrupt();}
+  else if(!down)return;
+  else if(k==='h')toggleHelp();
+  else if(k==='c')setCam((state.cam+1)%4);
+  else if(k>='1'&&k<='4')setCam(+k-1);
+  else if(k==='l')toggleLights();
+  else if(k==='n')toggleNight();
+  else if(k==='m')toggleSound();
+  else if(k==='r')respawn();
+  else if(k==='t')toggleWorld();
+  else if(k==='e')toggleAssist();
+  else if(k==='f')toggleFoot();
+  else if(k==='q')cycleQuality();
+  else if(k==='g')toggleAuto();
+  else return;
+  e.preventDefault();
+}
+addEventListener('keydown',function(e){onKey(e,true);});
+addEventListener('keyup',function(e){onKey(e,false);});
+addEventListener('blur',function(){
+  input._l=input._r=input._g=input._b=input._h=0;
+  input.gas=input.back=input.hand=input.steer=0;
+});
+if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
+[].forEach.call(document.querySelectorAll('#pad .k'),function(el){
+  var k=el.dataset.k;
+  function set(v){
+    if(k==='foot'){if(v)toggleFoot();el.classList.toggle('on',!!v);return;}
+    if(v)autoInterrupt();
+    if(k==='left')input._l=v;else if(k==='right')input._r=v;
+    else if(k==='gas'){input._g=v;if(v)initAudio();}else input._b=v;
+    el.classList.toggle('on',!!v);
+  }
+  el.addEventListener('pointerdown',function(e){e.preventDefault();set(1);});
+  ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+    el.addEventListener(ev,function(){set(0);});});
+});
+
+/* an analogue stick is a far kinder steering wheel than two keys */
+var padOn=false;
+function pollPad(){
+  if(!navigator.getGamepads)return;
+  var pads;
+  try{pads=navigator.getGamepads();}catch(e){return;}
+  var g=null,i;
+  if(!pads)return;
+  for(i=0;i<pads.length;i++)if(pads[i]&&pads[i].connected){g=pads[i];break;}
+  if(!g){
+    padOn=false;input.padSteer=input.padGas=input.padBack=input.padHand=0;return;
+  }
+  var ax=g.axes[0]||0;
+  if(Math.abs(ax)<0.14)ax=0;
+  function btn(n){return g.buttons&&g.buttons[n]?g.buttons[n].value:0;}
+  var rt=btn(7),lt=btn(6);
+  if(!padOn&&(ax||rt>0.06||lt>0.06)){padOn=true;flash('שלט מחובר','');}
+  input.padSteer=-ax;
+  input.padGas=rt>0.06?rt:(btn(0)>0.5?1:0);
+  input.padBack=lt>0.06?lt:0;
+  input.padHand=btn(1)>0.5?1:0;
+  if(input.padGas>0.2)initAudio();
+}
+
+/* =================================================================
+   CAMERAS
+   ================================================================= */
+var CAMS=['רדיפה','מכסה מנוע','תא נהג','קולנועי'];
+var camPos=new T.Vector3(),camAim=new T.Vector3(),tv=new T.Vector3();
+var camShake=0,orbitA=0,headX=0,headZ=0,headL=0;
+function setCam(i){state.cam=i;flash(CAMS[i],'');}
+/* on foot the car cameras make no sense: follow him instead, over the
+   shoulder, and keep the same smoothing so the hand-over is invisible */
+var _cv=new T.Vector3();
+function footCamera(dt){
+  if(MAN.mode!=='foot'){
+    /* climbing in or out: stand off beside the door and watch him do it */
+    carPt(5.20,1.90,_cv);
+    tv.set(_cv.x,groundAt(_cv.x,_cv.z)+2.10,_cv.z);
+    camPos.lerp(tv,Math.min(1,dt*3.0));
+    camera.position.copy(camPos);
+    camAim.lerp(_cv.set(PRIG.position.x,PRIG.position.y+0.24,PRIG.position.z),
+                Math.min(1,dt*4.5));
+    camera.lookAt(camAim);
+    camera.fov=lerp(camera.fov,50,Math.min(1,dt*3));
+    camera.updateProjectionMatrix();
+    return;
+  }
+  var sy=Math.sin(MAN.yaw),cy=Math.cos(MAN.yaw);
+  var back=3.15+0.30*clamp(Math.abs(MAN.spd)/4,0,1);
+  tv.set(MAN.x-sy*back+cy*0.42,MAN.y+1.78,MAN.z-cy*back-sy*0.42);
+  camPos.lerp(tv,Math.min(1,dt*4.2));
+  camera.position.copy(camPos);
+  camAim.lerp(tv.set(MAN.x+sy*2.4,MAN.y+1.12,MAN.z+cy*2.4),Math.min(1,dt*5.5));
+  camera.lookAt(camAim);
+  camera.fov=lerp(camera.fov,58,Math.min(1,dt*3));
+  camera.updateProjectionMatrix();
+}
+function updateCamera(dt){
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw),spd=Math.abs(S.vx);
+  /* from inside, the 56%-opaque tint turns midday into dusk */
+  var wantOp=(onFoot()||state.cam!==2)?((state.cam===1&&!onFoot())?0.34:0.56):0.16;
+  if(MAT.glass&&Math.abs(MAT.glass.opacity-wantOp)>0.004)
+    MAT.glass.opacity+=(wantOp-MAT.glass.opacity)*Math.min(1,dt*8);
+  if(onFoot()){footCamera(dt);return;}
+  if(state.cam===0){
+    var back=7.6+spd*0.055, up=2.45+spd*0.006;
+    var lag=clamp(S.vy*0.05,-0.55,0.55);
+    tv.set(S.x-sy*back+cy*lag,up,S.z-cy*back-sy*lag);
+    camPos.lerp(tv,Math.min(1,dt*(4.4+spd*0.05)));
+    camera.position.copy(camPos);
+    camAim.lerp(tv.set(S.x+sy*7.5,1.15,S.z+cy*7.5),Math.min(1,dt*6.5));
+    camera.lookAt(camAim);
+    camera.fov=lerp(camera.fov,60+clamp(spd*0.42,0,20),Math.min(1,dt*3));
+  }else if(state.cam===1||state.cam===2){
+    var loc=state.cam===1?[0,1.32,1.06]:[0.345,1.205,-0.36];
+    if(state.cam===2){                 /* the driver leans, and looks into the bend */
+      headX+=((clampAbs(-S.ay,10)*0.0075)-headX)*Math.min(1,dt*5.5);
+      headZ+=((clampAbs(S.ax,10)*0.0055)-headZ)*Math.min(1,dt*5);
+      headL+=((S.steer*2.6+clampAbs(S.vy,8)*0.22)-headL)*Math.min(1,dt*4);
+      loc[0]+=headX;loc[2]+=headZ;
+    }
+    carRig.updateMatrixWorld(true);
+    camera.position.set(loc[0],loc[1],loc[2]).applyMatrix4(car.matrixWorld);
+    camAim.set(loc[0]+(state.cam===2?headL:0),loc[1]-(state.cam===2?1.45:0.40),
+               loc[2]+9).applyMatrix4(car.matrixWorld);
+    camera.lookAt(camAim);
+    camera.fov=lerp(camera.fov,state.cam===1?68:63,Math.min(1,dt*3));
+  }else{
+    orbitA+=dt*0.24;
+    var R=11+Math.sin(orbitA*0.7)*3;
+    tv.set(S.x+Math.sin(orbitA)*R,3.0+Math.sin(orbitA*1.3)*1.5,S.z+Math.cos(orbitA)*R);
+    camPos.lerp(tv,Math.min(1,dt*2.2));
+    camera.position.copy(camPos);
+    camera.lookAt(S.x,0.75,S.z);
+    camera.fov=lerp(camera.fov,45,Math.min(1,dt*3));
+  }
+  if(camShake>0.001){
+    camera.position.x+=(Math.random()-0.5)*camShake;
+    camera.position.y+=(Math.random()-0.5)*camShake*0.7;
+    camera.position.z+=(Math.random()-0.5)*camShake;
+    camShake*=Math.max(0,1-dt*5);
+  }
+  camera.updateProjectionMatrix();
+}
+
+/* =================================================================
+   SOUND — synthesised, no audio files
+   ================================================================= */
+var AUD=null;
+function initAudio(){
+  if(AUD)return;
+  try{
+    var C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    var ac=new C();
+    var master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
+    function osc(type,det){var o=ac.createOscillator();o.type=type;o.detune.value=det;o.start();return o;}
+    var o1=osc('sawtooth',0),o2=osc('square',-9),o3=osc('sawtooth',7);
+    var lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=760;lp.Q.value=3.0;
+    var eg=ac.createGain();eg.gain.value=0.18;
+    o1.connect(eg);o2.connect(eg);o3.connect(eg);eg.connect(lp);lp.connect(master);
+    var buf=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=buf.getChannelData(0);
+    for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    function noise(){var n=ac.createBufferSource();n.buffer=buf;n.loop=true;n.start();return n;}
+    var bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1750;bp.Q.value=1.5;
+    var ng=ac.createGain();ng.gain.value=0;
+    noise().connect(bp);bp.connect(ng);ng.connect(master);
+    var wf=ac.createBiquadFilter();wf.type='lowpass';wf.frequency.value=520;
+    var wg=ac.createGain();wg.gain.value=0;
+    noise().connect(wf);wf.connect(wg);wg.connect(master);
+    AUD={ac:ac,master:master,o1:o1,o2:o2,o3:o3,lp:lp,eg:eg,ng:ng,wg:wg};
+    if(ac.state==='suspended')ac.resume();
+    state.sound=true;syncButtons();
+    master.gain.setTargetAtTime(0.5,ac.currentTime,0.4);
+  }catch(err){}
+}
+function updateAudio(){
+  if(!AUD||!state.sound)return;
+  var t=AUD.ac.currentTime,f=34+S.rpm*0.052,gas=onFoot()?0:input.gas;
+  AUD.o1.frequency.setTargetAtTime(f,t,0.04);
+  AUD.o2.frequency.setTargetAtTime(f*0.5,t,0.04);
+  AUD.o3.frequency.setTargetAtTime(f*2.01,t,0.05);
+  AUD.lp.frequency.setTargetAtTime(420+S.rpm*0.30+gas*900,t,0.06);
+  AUD.eg.gain.setTargetAtTime(0.09+gas*0.14+clamp(S.rpm/9000,0,1)*0.10,t,0.08);
+  AUD.ng.gain.setTargetAtTime(clamp((S.slide-0.4)*0.30,0,1)*(S.onRoad?1:0.4)*0.28,t,0.05);
+  AUD.wg.gain.setTargetAtTime(clamp(Math.abs(S.vx)/70,0,1)*0.13,t,0.2);
+}
+function toggleSound(){
+  if(!AUD){initAudio();return;}
+  state.sound=!state.sound;
+  AUD.master.gain.setTargetAtTime(state.sound?0.5:0,AUD.ac.currentTime,0.15);
+  syncButtons();
+}
+
+/* =================================================================
+   LIGHTS / DAY-NIGHT
+   ================================================================= */
+function setLights(on){
+  LIGHTS.head.forEach(function(m){m.material=on?MAT.ledOn:MAT.ledOff;});
+  LIGHTS.drl.forEach(function(m){m.material=on?MAT.ledOn:MAT.ledOff;});
+  LIGHTS.beams.forEach(function(b){b.visible=on;});
+  LIGHTS.spots.forEach(function(s){s.intensity=on?9.5:0;});
+  setBrakeLights(S.brake>0.05);
+}
+function setBrakeLights(on){
+  LIGHTS.brake.forEach(function(m){m.material=on?MAT.tailOn:MAT.tailOff;});
+  LIGHTS.tail.forEach(function(m){m.material=(on||state.lights)?MAT.tailOn:MAT.tailOff;});
+}
+function setReverse(on){LIGHTS.rev.forEach(function(m){m.material=on?MAT.ledOn:MAT.ledOff;});}
+function swapEnv(t){
+  scene.traverse(function(o){
+    if(o.material){
+      (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){
+        if(m.envMap){m.envMap=t;m.needsUpdate=true;}
+      });
+    }
+  });
+}
+function applyEnv(){
+  var n=state.night,p=n?SKY.night:SKY.day;
+  skyMat.map=n?SKYT.night:SKYT.day;skyMat.needsUpdate=true;
+  STARS.visible=n;
+  scene.fog.color.setHex(p.fog);scene.fog.near=p.fogN;scene.fog.far=p.fogF;
+  scene.environment=n?ENV_NIGHT:ENV_DAY;
+  swapEnv(n?ENV_NIGHT:ENV_DAY);
+  sun.intensity=n?0.20:2.55;
+  sun.color.setHex(n?0x9fb6ff:0xfff1dd);
+  hemi.intensity=n?0.16:0.74;hemi.color.setHex(n?0x59699a:0xbcd8ff);
+  bounce.intensity=n?0.05:0.32;
+  renderer.toneMappingExposure=n?1.24:1.02;
+  cabin.intensity=n?0.45:1.4;
+  if(lampBulbMat){
+    lampBulbMat.emissive.setHex(n?0xffe3ae:0x000000);
+    lampBulbMat.color.setHex(n?0xfff0d0:0x8d9299);
+    lampBulbMat.needsUpdate=true;
+  }
+  for(var ci=0;ci<CITY.lit.length;ci++)CITY.lit[ci].emissiveIntensity=n?1.25:0;
+  syncButtons();
+}
+function toggleNight(){
+  state.night=!state.night;
+  if(state.night&&!state.lights){state.lights=true;setLights(true);}
+  applyEnv();
+}
+function toggleLights(){state.lights=!state.lights;setLights(state.lights);syncButtons();}
+
+/* =================================================================
+   QUALITY — the car alone is ~250k triangles, so give slow machines a way out
+   ================================================================= */
+var QUAL=['גבוהה','בינונית','נמוכה'],qi=0;
+function applyQuality(){
+  var dpr=window.devicePixelRatio||1;
+  renderer.setPixelRatio(Math.min(dpr,qi===0?2:(qi===1?1.4:1)));
+  renderer.shadowMap.enabled=qi<2;
+  sun.castShadow=qi<2;
+  if(qi<2){
+    var n=qi===0?2048:1024;
+    if(sun.shadow.mapSize.x!==n){
+      sun.shadow.mapSize.set(n,n);
+      if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
+    }
+  }
+  renderer.setSize(innerWidth,innerHeight,false);
+  scene.traverse(function(o){
+    if(o.material)(Array.isArray(o.material)?o.material:[o.material])
+      .forEach(function(m){m.needsUpdate=true;});
+  });
+  document.getElementById('qlbl').textContent=QUAL[qi];
+}
+function cycleQuality(){qi=(qi+1)%3;applyQuality();flash('איכות '+QUAL[qi],'');}
+
+/* =================================================================
+   HUD
+   ================================================================= */
+var kmhEl=document.querySelector('#kmh b'),gearEl=document.getElementById('gear');
+var curEl=document.getElementById('cur'),bestEl=document.getElementById('best');
+var lapsEl=document.getElementById('laps'),warnEl=document.getElementById('warn');
+var moodEl=document.getElementById('mood');
+function drawMood(){
+  moodEl.textContent=(AUTO.on?'טייס אוטומטי: '+AUTO.why+'  ·  ':'')+
+    'בעיר: '+NPC.activeCars+' רכבים · '+NPC.activePeds+' הולכי רגל';
+}
+var dmgEl=document.getElementById('dmg');
+function drawDamage(){
+  var d=Math.round(DMG*100);
+  dmgEl.textContent=d<3?'מצב הרכב: תקין':
+    ('נזק: '+d+'%'+(DMG>0.32?'  ·  מעשן':'')+(DMG>0.6?'  ·  אובדן הספק':''));
+  dmgEl.style.color=DMG>0.6?'#ff7a7a':(DMG>0.32?'#ffc46b':'');
+}
+var flashEl=document.getElementById('flash'),flashB=document.getElementById('flashB');
+var flashS=document.getElementById('flashS');
+var fkmEl=document.getElementById('fkm'),ftopEl=document.getElementById('ftop');
+var ftimeEl=document.getElementById('ftime');
+var A0=PI*0.80,A1=PI*2.22;
+function arc(cx,cy,r,a0,a1){
+  var x0=cx+Math.cos(a0)*r,y0=cy+Math.sin(a0)*r;
+  var x1=cx+Math.cos(a1)*r,y1=cy+Math.sin(a1)*r;
+  return 'M'+x0.toFixed(2)+' '+y0.toFixed(2)+'A'+r+' '+r+' 0 '+((a1-a0)>PI?1:0)+' 1 '+
+         x1.toFixed(2)+' '+y1.toFixed(2);
+}
+document.getElementById('arcBg').setAttribute('d',arc(100,100,78,A0,A1));
+document.getElementById('arcRev').setAttribute('d',arc(100,100,63,A0,A1));
+(function(){
+  var g=document.getElementById('ticks'),h='';
+  for(var v=0;v<=280;v+=40){
+    var a=A0+(A1-A0)*(v/280),c=Math.cos(a),s=Math.sin(a);
+    h+='<line x1="'+(100+c*70).toFixed(1)+'" y1="'+(100+s*70).toFixed(1)+'" x2="'+
+       (100+c*62).toFixed(1)+'" y2="'+(100+s*62).toFixed(1)+
+       '" stroke="rgba(255,255,255,.32)" stroke-width="2"/>'+
+       '<text x="'+(100+c*51).toFixed(1)+'" y="'+(100+s*51+4).toFixed(1)+
+       '" fill="rgba(255,255,255,.40)" font-size="10" text-anchor="middle" '+
+       'font-family="ui-monospace,Menlo">'+v+'</text>';
+  }
+  g.innerHTML=h;
+})();
+var arcFg=document.getElementById('arcFg'),arcRevF=document.getElementById('arcRevF');
+function fmt(t){
+  if(!t)return '—';
+  var m=Math.floor(t/60),s=t-m*60;
+  return m+':'+(s<10?'0':'')+s.toFixed(2);
+}
+function fmtClock(t){
+  var m=Math.floor(t/60),s=Math.floor(t-m*60);
+  return m+':'+(s<10?'0':'')+s;
+}
+var flashT=0;
+function flash(big,small){
+  flashB.textContent=big;flashS.textContent=small||'';
+  flashEl.className='on';flashT=1.9;
+}
+function updateHUD(dt){
+  var kmh=Math.abs(S.vx)*3.6;
+  kmhEl.textContent=Math.round(kmh);
+  gearEl.textContent=S.gear===0?'R':(Math.abs(S.vx)<0.4?'N':S.gear);
+  arcFg.setAttribute('d',arc(100,100,78,A0,A0+(A1-A0)*Math.max(clamp(kmh/280,0,1),0.001)));
+  var rf=clamp((S.rpm-800)/7200,0,1);
+  arcRevF.setAttribute('d',arc(100,100,63,A0,A0+(A1-A0)*Math.max(rf,0.001)));
+  arcRevF.setAttribute('stroke',rf>0.87?'#ff3b30':'rgba(255,255,255,.5)');
+  if(MODE==='city'){
+    fkmEl.textContent=(S.dist/1000).toFixed(2)+' ק״מ';
+    ftopEl.textContent=Math.round(S.top);
+    ftimeEl.textContent=fmtClock(S.drive);
+  }else{
+    curEl.textContent=S.started?fmt(S.lapT):'0:00.00';
+    bestEl.textContent=S.best?fmt(S.best):'—';
+    lapsEl.textContent='הקפה '+(S.laps+1);
+  }
+  warnEl.className=S.wrong?'on':'';
+  if(flashT>0){flashT-=dt;if(flashT<=0)flashEl.className='';}
+}
+var mapC=document.getElementById('map'),mx=mapC.getContext('2d'),mapT;
+function buildMap(){
+  var xs=TRACK.pts.map(function(p){return p.x;}),zs=TRACK.pts.map(function(p){return p.z;});
+  var minx=Math.min.apply(null,xs),maxx=Math.max.apply(null,xs);
+  var minz=Math.min.apply(null,zs),maxz=Math.max.apply(null,zs);
+  mapT={minx:minx,minz:minz,span:Math.max(maxx-minx,maxz-minz)};
+}
+function carArrow(x,k){
+  x.save();x.rotate(-S.yaw+PI);
+  x.fillStyle='#ff2d6f';
+  x.beginPath();x.moveTo(0,-11*k);x.lineTo(7*k,9*k);x.lineTo(0,5*k);x.lineTo(-7*k,9*k);
+  x.closePath();x.fill();x.restore();
+}
+function paintTrack(x,w){
+  var k=w/316,pad=20*k,sc=(w-pad*2)/mapT.span,i,p;
+  function X(v){return pad+(v-mapT.minx)*sc;}
+  function Y(v){return pad+(v-mapT.minz)*sc;}
+  x.clearRect(0,0,w,w);
+  x.lineJoin='round';x.lineCap='round';
+  x.beginPath();
+  for(i=0;i<=TRACK.N;i+=4){p=TRACK.pts[i];i?x.lineTo(X(p.x),Y(p.z)):x.moveTo(X(p.x),Y(p.z));}
+  x.closePath();
+  x.strokeStyle='rgba(255,255,255,.13)';x.lineWidth=13*k;x.stroke();
+  x.strokeStyle='rgba(255,255,255,.30)';x.lineWidth=1.4*k;x.stroke();
+  p=TRACK.pts[0];
+  x.fillStyle='#00d4ff';x.fillRect(X(p.x)-4*k,Y(p.z)-4*k,8*k,8*k);
+  /* the sea, so the map reads the same way round as the world does */
+  x.fillStyle='rgba(60,140,190,.30)';
+  x.fillRect(0,0,X(-(CITY.out+150)),w);
+  /* and home, because a house you cannot find is a house you do not have */
+  var hx=X(HOME.x),hz=Y(HOME.z);
+  x.fillStyle='#ffd23f';x.strokeStyle='rgba(20,20,24,.75)';x.lineWidth=1.4*k;
+  x.beginPath();
+  x.moveTo(hx,hz-5.2*k);x.lineTo(hx+4.6*k,hz-0.8*k);x.lineTo(hx+3.0*k,hz-0.8*k);
+  x.lineTo(hx+3.0*k,hz+4.4*k);x.lineTo(hx-3.0*k,hz+4.4*k);x.lineTo(hx-3.0*k,hz-0.8*k);
+  x.lineTo(hx-4.6*k,hz-0.8*k);x.closePath();
+  x.fill();x.stroke();
+  x.save();x.translate(X(S.x),Y(S.z));carArrow(x,k);x.restore();
+}
+function paintMap(x,w){if(MODE==='city')paintCity(x,w);else paintTrack(x,w);}
+function drawMap(){paintMap(mx,mapC.width);}
+
+/* =================================================================
+   LAPS
+   ================================================================= */
+var lastIdx=0;
+function lapLogic(dt){
+  var i=S.idx,N=TRACK.N;
+  if(S.started)S.lapT+=dt;
+  if(lastIdx>N-100&&i<100){
+    if(S.started){
+      S.laps++;
+      if(!S.best||S.lapT<S.best){S.best=S.lapT;flash(fmt(S.lapT),'הקפה הכי מהירה!');}
+      else flash(fmt(S.lapT),'הקפה '+S.laps);
+    }else flash('הקפה מתחילה','המדידה רצה');
+    S.started=true;S.lapT=0;
+  }else if(lastIdx<100&&i>N-100&&S.started){S.started=false;S.lapT=0;}
+  lastIdx=i;
+}
+function freeLogic(dt){
+  var sp=Math.abs(S.vx)*3.6;
+  S.dist+=Math.abs(S.vx)*dt;S.drive+=dt;
+  if(sp>S.top)S.top=sp;
+}
+function respawn(){
+  if(onFoot())snapIn();
+  if(MODE==='city')cityRespawn();else placeOnTrack(S.idx);
+  flash('חזרה לכביש','');
+}
+
+/* =================================================================
+   WORLDS — the circuit and the town, one loaded scene each
+   ================================================================= */
+function snapCam(){
+  camPos.set(S.x-Math.sin(S.yaw)*8,2.6,S.z-Math.cos(S.yaw)*8);
+  camAim.set(S.x,1.1,S.z);
+  camera.position.copy(camPos);
+  headX=headZ=headL=0;
+}
+function setWorld(m){
+  if(car&&MODE!==m)SAVED[MODE]={x:S.x,z:S.z,yaw:S.yaw,idx:S.idx};
+  MODE=m;
+  world.visible=(m==='track');cityG.visible=(m==='city');
+  if(m!=='city')INT.clear();
+  document.body.classList.toggle('city',m==='city');
+  document.getElementById('wlbl').textContent=(m==='city')?'עיר':'מסלול';
+  var sp=SAVED[m];
+  if(m==='track'){
+    if(sp){resetCar(sp.x,sp.z,sp.yaw);S.idx=sp.idx;lastIdx=sp.idx;S.lapT=0;S.started=false;}
+    else placeOnTrack(TRACK.N-30);
+    trackProbe();
+  }else{
+    if(sp)resetCar(sp.x,sp.z,sp.yaw);
+    else resetCar(-4.3,-CITY.P*3+34,0);   /* right-hand lane, driving into town */
+    cityProbe();
+  }
+  snapCam();drawMap();
+}
+function toggleWorld(){
+  if(onFoot())snapIn();
+  setWorld(MODE==='city'?'track':'city');
+  flash(MODE==='city'?'עיר':'מסלול מרוצים',
+        MODE==='city'?'נסיעה חופשית':'מדידת הקפות');
+}
+function toggleAssist(){
+  ASSIST=!ASSIST;syncButtons();
+  flash(ASSIST?'עזרי נהיגה פועלים':'עזרי נהיגה כבויים',
+        ASSIST?'':'הרכב חופשי לגמרי');
+}
+
+/* =================================================================
+   BUTTONS
+   ================================================================= */
+function toggleHelp(){document.getElementById('help').classList.toggle('on');}
+function syncButtons(){
+  var f=document.querySelector('[data-a="foot"]');
+  f.classList.toggle('on',onFoot());
+  document.getElementById('flbl').textContent=onFoot()?'לחזור לרכב':'לצאת מהרכב';
+  document.querySelector('[data-a="night"]').classList.toggle('on',state.night);
+  document.querySelector('[data-a="sound"]').classList.toggle('on',state.sound);
+  document.querySelector('[data-a="assist"]').classList.toggle('on',ASSIST);
+}
+document.getElementById('tools').addEventListener('click',function(e){
+  var t=e.target.closest('[data-a]');if(!t)return;
+  var a=t.dataset.a;
+  if(a==='help')toggleHelp();
+  else if(a==='cam')setCam((state.cam+1)%4);
+  else if(a==='foot')toggleFoot();
+  else if(a==='night')toggleNight();
+  else if(a==='sound')toggleSound();
+  else if(a==='qual')cycleQuality();
+  else if(a==='world')toggleWorld();
+  else if(a==='auto')toggleAuto();
+  else if(a==='assist')toggleAssist();
+  else if(a==='home')goHome();
+  else if(a==='reset'){DMG=0;respawn();}
+});
+document.getElementById('help').addEventListener('click',function(e){
+  if(e.target.id==='help'||e.target.closest('[data-a="help"]'))toggleHelp();
+});
+
+/* =================================================================
+   COCKPIT SCREENS — the cluster and the console run live, so the
+   view from the driver's seat shows what the car is actually doing
+   ================================================================= */
+function screenCanvas(w,h){
+  var c=cvs(w,h),x=c.getContext('2d');
+  var t=tex(c,1,1);t.anisotropy=4;
+  return {c:c,x:x,t:t,mat:new T.MeshBasicMaterial({map:t,toneMapped:false})};
+}
+var CLS=screenCanvas(512,256),NAV=screenCanvas(512,256);
+function drawCluster(){
+  /* the wheel hub covers the middle of the binnacle, so everything that
+     matters lives in the band above it or the strip below it */
+  var x=CLS.x,kmh=Math.abs(S.vx)*3.6,rf=clamp((S.rpm-800)/7200,0,1),i,w;
+  x.fillStyle='#04060a';x.fillRect(0,0,512,256);
+  x.fillStyle='#101822';x.fillRect(26,8,460,17);           /* rev bar */
+  w=460*Math.max(rf,0.004);
+  x.fillStyle=rf>0.88?'#ff3b30':(rf>0.72?'#ffb020':'#00d4ff');
+  x.fillRect(26,8,w,17);
+  x.fillStyle='#04060a';
+  for(i=1;i<12;i++)x.fillRect(26+460*i/12,8,3,17);
+  x.fillStyle='#ff3b30';x.fillRect(26+460*0.88,4,4,25);    /* redline */
+  x.textAlign='center';x.textBaseline='middle';
+  x.fillStyle='#eef3ff';x.font='bold 70px Arial';x.fillText(Math.round(kmh),244,66);
+  x.textAlign='left';
+  x.fillStyle='#5d6a80';x.font='bold 16px Arial';x.fillText('KM/H',348,80);
+  x.fillStyle='#00d4ff';x.font='bold 36px Arial';
+  x.fillText(S.gear===0?'R':(Math.abs(S.vx)<0.4?'N':String(S.gear)),348,50);
+  x.fillStyle='#5d6a80';x.font='bold 14px Arial';
+  x.fillText(MODE==='city'?'CITY':'CIRCUIT',26,48);
+  x.fillStyle='#8b97a9';x.font='bold 18px Arial';
+  x.fillText(MODE==='city'?((S.dist/1000).toFixed(1)+' km'):(S.started?fmt(S.lapT):'--:--'),22,232);
+  x.textAlign='right';
+  x.fillStyle=ASSIST?'#28e0a0':'#ff3b30';x.font='bold 16px Arial';
+  x.fillText(ASSIST?'ESP':'ESP OFF',490,232);
+  x.fillStyle=state.lights?'#00d4ff':'#26303c';x.fillText('LIGHTS',490,52);
+  CLS.t.needsUpdate=true;
+}
+function drawNav(){
+  var x=NAV.x,kmh=Math.abs(S.vx)*3.6;
+  x.fillStyle='#05080d';x.fillRect(0,0,512,256);
+  x.save();x.translate(2,-2);paintMap(x,256);x.restore();
+  x.fillStyle='#05080d';x.fillRect(258,0,254,256);
+  x.textAlign='left';x.textBaseline='middle';
+  x.fillStyle='#00d4ff';x.font='bold 17px Arial';
+  x.fillText(MODE==='city'?'FREE DRIVE':'CIRCUIT',276,28);
+  x.fillStyle='#eef3ff';x.font='bold 62px Arial';x.fillText(Math.round(kmh),276,86);
+  x.fillStyle='#5d6a80';x.font='bold 16px Arial';x.fillText('KM/H',276,124);
+  x.fillStyle='#8b97a9';x.font='bold 19px Arial';
+  x.fillText(MODE==='city'?((S.dist/1000).toFixed(2)+' km'):('LAP '+(S.laps+1)),276,166);
+  x.fillText(MODE==='city'?fmtClock(S.drive):(S.best?fmt(S.best):'--:--'),276,200);
+  x.fillStyle=state.night?'#7b5cff':'#2a3442';x.font='bold 15px Arial';
+  x.fillText(state.night?'NIGHT':'DAY',276,232);
+  NAV.t.needsUpdate=true;
+}
+
+/* =================================================================
+   THE DRIVER — one figure, three lives: sitting at the wheel with his
+   hands driven onto the rim by IK, climbing out over the sill, and
+   walking around on foot. Every pose is a handful of end-effector
+   targets in his own space; the IK does the rest.
+   ================================================================= */
+var DRV=null,PRIG=null,DOORS=null;
+var DRVP=new T.Vector3(0.335,0.575,-0.260);        /* hip joint, in car space */
+var DSC=0.94;                                      /* fits the low cabin */
+var ANKLE=0.077;                                   /* ankle above the sole */
+var STAND=0.905;                                   /* hip above the ground */
+var GRIPL=new T.Vector3(0.150,0,-0.048),GRIPR=new T.Vector3(-0.150,0,-0.048);
+var POLEL=new T.Vector3(0.45,-1,-0.35).normalize();
+var POLER=new T.Vector3(-0.45,-1,-0.35).normalize();
+var KNEEL=new T.Vector3(0.28,1,0.15).normalize();
+var KNEER=new T.Vector3(-0.28,1,0.15).normalize();
+var HANGL=new T.Vector3(0.50,-0.25,-1).normalize();
+var HANGR=new T.Vector3(-0.50,-0.25,-1).normalize();
+var WKNEE=new T.Vector3(0,0.35,1).normalize();
+var _gv=new T.Vector3(),_sh=new T.Vector3();
+var _fL=new T.Vector3(),_fR=new T.Vector3(),_hL=new T.Vector3(),_hR=new T.Vector3();
+
+/* where he stands once he is out, and where he must be to get back in */
+var OUT_SPOT=[1.98,-0.34];                         /* car space x,z */
+var SILL_SPOT=[0.74,-0.14];
+var EXIT_T=2.15,ENTER_T=2.00;
+
+var MAN={mode:'seat',t:0,x:0,z:0,y:0,yaw:0,spd:0,vis:0,gait:0,run:0,
+         door:0,head:0,near:false,fx:0,fz:0,fyaw:0};
+
+function addDriver(){
+  DRV=A.person({detail:'high',lean:-0.22,shades:false,
+    jacket:new T.MeshStandardMaterial({color:0x2b3240,roughness:0.87,metalness:0,
+      envMap:ENV_DAY,envMapIntensity:0.24}),
+    trouser:new T.MeshStandardMaterial({color:0x2a2f3a,roughness:0.92,metalness:0,
+      envMap:ENV_DAY,envMapIntensity:0.16})});
+  PRIG=new T.Group();PRIG.scale.setScalar(DSC);PRIG.add(DRV.g);scene.add(PRIG);
+}
+/* car space -> the driver's own (scaled) space, for a seated target */
+function toDriver(x,y,z){return _gv.set(x,y,z).sub(DRVP).divideScalar(DSC);}
+/* car space -> world */
+function carPt(x,z,out){
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw);
+  return out.set(S.x+x*cy+z*sy,0,S.z-x*sy+z*cy);
+}
+/* the shoulder moves when he leans, so the arm IK has to follow it */
+function shoulder(sg,lean,out){
+  var cl=Math.cos(lean),sl=Math.sin(lean);
+  return out.set(sg*0.163,0.455*cl-0.012*sl,0.455*sl+0.012*cl);
+}
+/* drive the whole figure from one set of targets in his own space */
+function applyPose(px,py,pz,yaw,lean,headY,fL,fR,hL,hR,kneeL,kneeR,elbL,elbR){
+  PRIG.position.set(px,py,pz);
+  PRIG.rotation.set(0,yaw,0);
+  DRV.body.rotation.x=lean;
+  A.poseChain(DRV.legL.up,DRV.legL.fore,DRV.legL.hand,DRV.hipL,fL,kneeL||KNEEL);
+  A.poseChain(DRV.legR.up,DRV.legR.fore,DRV.legR.hand,DRV.hipR,fR,kneeR||KNEER);
+  A.poseChain(DRV.armL.up,DRV.armL.fore,DRV.armL.hand,shoulder(1,lean,_sh),hL,elbL||POLEL);
+  A.poseChain(DRV.armR.up,DRV.armR.fore,DRV.armR.hand,shoulder(-1,lean,_sh),hR,elbR||POLER);
+  DRV.head.rotation.y=headY;
+}
+
+/* ---- pose A: at the wheel ---------------------------------------- */
+function seatedTargets(){
+  _fR.copy(toDriver(0.255,0.470,0.420));
+  _fL.copy(toDriver(0.430,0.430,0.360));
+  if(IT&&IT.wheel){
+    IT.wheel.updateMatrix();
+    _hL.copy(GRIPL).applyMatrix4(IT.wheel.matrix).sub(DRVP).divideScalar(DSC);
+    _hR.copy(GRIPR).applyMatrix4(IT.wheel.matrix).sub(DRVP).divideScalar(DSC);
+  }else{_hL.set(0.16,0.30,0.42);_hR.set(-0.16,0.30,0.42);}
+}
+function poseSeated(){
+  seatedTargets();
+  applyPose(0,0,0,0,-0.22,clampAbs(S.steer*0.42,0.34),_fL,_fR,_hL,_hR);
+  car.updateWorldMatrix(true,false);           /* so he rolls with the body */
+  PRIG.position.copy(DRVP).applyMatrix4(car.matrixWorld);
+  PRIG.quaternion.setFromRotationMatrix(car.matrixWorld);
+  PRIG.scale.setScalar(DSC);
+  DRV.head.visible=(state.cam!==2);
+}
+
+/* ---- pose C: standing, with a walk cycle ------------------------- */
+/* one cycle is two steps; in stance the foot slides back exactly as fast
+   as the body moves forward, so the shoes never skate on the tarmac */
+function stepFoot(ph,step,out,sg){
+  var p=ph-Math.floor(ph),z,lift;
+  if(p<0.5){z=step*(0.5-p*2);lift=0;}
+  else{var q=(p-0.5)*2;z=step*(q-0.5);lift=0.11*step/0.62*Math.sin(PI*q);}
+  out.set(sg*0.104,-(STAND-ANKLE)+lift,z);
+  return p;
+}
+function footPitch(p){
+  if(p<0.10)return lerp(0.20,0,p/0.10);
+  if(p<0.32)return 0;
+  if(p<0.50)return lerp(0,-0.42,(p-0.32)/0.18);
+  if(p<0.72)return lerp(-0.42,0.14,(p-0.50)/0.22);
+  return lerp(0.14,0.20,(p-0.72)/0.28);
+}
+function poseWalk(x,y,z,yaw,dt){
+  var sp=Math.abs(MAN.vis);
+  var step=0.34+0.30*clamp(sp/3.4,0,1);
+  if(sp>0.04)MAN.gait+=dt*MAN.vis/(2*step);
+  else MAN.gait+=(Math.round(MAN.gait*2)/2-MAN.gait)*Math.min(1,dt*6);
+  var g=MAN.gait,amp=clamp(sp/1.5,0,1);
+  var pL=stepFoot(g,step*amp,_fL,1),pR=stepFoot(g+0.5,step*amp,_fR,-1);
+  var bob=-0.026*amp*(0.5-0.5*Math.cos(4*PI*g));
+  _fL.y-=bob;_fR.y-=bob;
+  var sw=Math.sin(PI*2*g)*0.62*step*amp;
+  _hL.set(0.203+0.02*amp,-0.078+0.055*amp,0.03-sw);
+  _hR.set(-0.203-0.02*amp,-0.078+0.055*amp,0.03+sw);
+  var lean=0.035+0.15*clamp(sp/4.2,0,1);   /* positive tips him forward */
+  applyPose(x,y+bob*DSC,z,yaw,lean,MAN.head,_fL,_fR,_hL,_hR,
+            WKNEE,WKNEE,HANGL,HANGR);
+  DRV.legL.hand.rotation.set(footPitch(pL),0,0);
+  DRV.legR.hand.rotation.set(footPitch(pR),0,0);
+  DRV.head.visible=true;
+}
+
+/* ---- the climb out, and the climb back in ------------------------ */
+/* Four poses, all written in car space because that is where the sill,
+   the seat and the door frame are: at the wheel, legs lifted over the
+   sill, perched on the sill with both feet down, upright beside the car.
+   Everything in between is a blend, and the IK keeps the joints honest. */
+var SOLE=ANKLE*DSC;                      /* ankle above the ground, in world */
+var _kr=[0,0,0];
+function toKey(cx,cy,cz,yawOff,out){
+  var dx=cx-_kr[0],dy=cy-_kr[1],dz=cz-_kr[2];
+  var c=Math.cos(yawOff),sn=Math.sin(yawOff);
+  return out.set((dx*c-dz*sn)/DSC,dy/DSC,(dx*sn+dz*c)/DSC);
+}
+function newKey(){return {px:0,py:0,pz:0,yaw:0,lean:0,head:0,
+  fL:new T.Vector3(),fR:new T.Vector3(),hL:new T.Vector3(),hR:new T.Vector3()};}
+/* place a key: root in car space, then every target in car space too */
+function putKey(out,rx,ry,rz,yawOff,lean,head,fL,fR,hL,hR){
+  _kr[0]=rx;_kr[1]=ry;_kr[2]=rz;
+  carPt(rx,rz,_gv);
+  out.px=_gv.x;out.py=ry+car.position.y;out.pz=_gv.z;
+  out.yaw=S.yaw+yawOff;out.lean=lean;out.head=head;
+  toKey(fL[0],fL[1],fL[2],yawOff,out.fL);
+  toKey(fR[0],fR[1],fR[2],yawOff,out.fR);
+  toKey(hL[0],hL[1],hL[2],yawOff,out.hL);
+  toKey(hR[0],hR[1],hR[2],yawOff,out.hR);
+  return out;
+}
+function keyPose(k,out){
+  if(k===0){
+    seatedTargets();
+    carPt(DRVP.x,DRVP.z,_gv);
+    out.px=_gv.x;out.py=DRVP.y+car.position.y;out.pz=_gv.z;
+    out.yaw=S.yaw;out.lean=-0.22;out.head=0;
+    out.fL.copy(_fL);out.fR.copy(_fR);out.hL.copy(_hL);out.hR.copy(_hR);
+    return out;
+  }
+  if(k===1)   /* knees up and round, feet lifted clear of the sill */
+    return putKey(out,0.470,0.600,-0.300,0.62,-0.26,-0.42,
+      [0.960,0.545,0.105],[0.820,0.510,0.290],
+      [1.010,0.775,-0.300],[0.060,0.720,-0.090]);
+  if(k===2){  /* perched on the sill, both feet on the ground outside */
+    carPt(1.35,0.02,_gv);
+    var g=groundAt(_gv.x,_gv.z);
+    return putKey(out,0.800,0.600,-0.220,1.34,-0.36,-0.20,
+      [1.360,g+SOLE,0.170],[1.230,g+SOLE,-0.070],
+      [1.060,0.300,0.360],[0.330,0.640,-0.470]);
+  }
+  carPt(OUT_SPOT[0],OUT_SPOT[1],_gv);     /* upright, a step clear of the door */
+  var gy=groundAt(_gv.x,_gv.z);
+  out.px=_gv.x;out.py=gy+STAND*DSC;out.pz=_gv.z;
+  out.yaw=S.yaw+PI/2;out.lean=0.035;out.head=0;
+  out.fL.set(0.104,-(STAND-ANKLE),0.03);
+  out.fR.set(-0.104,-(STAND-ANKLE),-0.03);
+  out.hL.set(0.207,-0.075,0.02);out.hR.set(-0.207,-0.075,0.02);
+  return out;
+}
+var K0=newKey(),K1=newKey(),K2=newKey(),K3=newKey();
+var _poleL=new T.Vector3(),_poleR=new T.Vector3();
+function blendKey(a,b,t,armT){
+  var yaw=a.yaw+shortAngle(b.yaw-a.yaw)*t;
+  _fL.lerpVectors(a.fL,b.fL,t);_fR.lerpVectors(a.fR,b.fR,t);
+  _hL.lerpVectors(a.hL,b.hL,t);_hR.lerpVectors(a.hR,b.hR,t);
+  applyPose(lerp(a.px,b.px,t),lerp(a.py,b.py,t),lerp(a.pz,b.pz,t),yaw,
+            lerp(a.lean,b.lean,t),lerp(a.head,b.head,t),_fL,_fR,_hL,_hR,
+            KNEEL,KNEER,
+            _poleL.copy(POLEL).lerp(HANGL,armT).normalize(),
+            _poleR.copy(POLER).lerp(HANGR,armT).normalize());
+  DRV.legL.hand.rotation.set(0,0,0);
+  DRV.legR.hand.rotation.set(0,0,0);
+  DRV.head.visible=true;
+}
+function shortAngle(a){while(a>PI)a-=PI*2;while(a<-PI)a+=PI*2;return a;}
+function ease(t){return t*t*(3-2*t);}
+
+function poseTransition(){
+  var t=clamp(MAN.t,0,1),u=MAN.mode==='in'?1-t:t;
+  keyPose(0,K0);keyPose(1,K1);keyPose(2,K2);keyPose(3,K3);
+  if(MAN.mode==='in'){
+    /* he may be standing a step or two off the mark: walk him onto it first,
+       feet and all, so the approach is a couple of paces and not a slide */
+    var w=ease(clamp(t/0.26,0,1));
+    K3.px=lerp(MAN.fx,K3.px,w);K3.pz=lerp(MAN.fz,K3.pz,w);
+    K3.py=lerp(MAN.y+STAND*DSC,K3.py,w);
+    K3.yaw=MAN.fyaw+shortAngle(K3.yaw-MAN.fyaw)*w;
+    if(w<1){
+      MAN.gait+=0.048;
+      var sn=Math.sin(PI*2*MAN.gait),st=0.30*(1-w);
+      K3.fL.z= 0.03+st*sn;K3.fR.z=-0.03-st*sn;
+      K3.fL.y=-(STAND-ANKLE)+Math.max(0, sn)*0.08*(1-w);
+      K3.fR.y=-(STAND-ANKLE)+Math.max(0,-sn)*0.08*(1-w);
+    }
+  }
+  if(u<0.30)blendKey(K0,K1,ease(u/0.30),0);
+  else if(u<0.62)blendKey(K1,K2,ease((u-0.30)/0.32),0);
+  else blendKey(K2,K3,ease((u-0.62)/0.38),ease((u-0.62)/0.38));
+}
+
+/* ---- the door he climbs through ---------------------------------- */
+function setDoor(v){
+  MAN.door=v;
+  if(DOORS&&DOORS.L)DOORS.L.rotation.y=-v*A.DOOR.open;
+}
+function doorWant(){
+  if(MAN.mode==='out')return MAN.t<0.82?smoothTo(MAN.t/0.20):1-smoothTo((MAN.t-0.82)/0.18);
+  if(MAN.mode==='in') return MAN.t<0.80?smoothTo(MAN.t/0.16):1-smoothTo((MAN.t-0.80)/0.20);
+  return 0;
+}
+function smoothTo(x){return ease(clamp(x,0,1));}
+
+/* ---- ground and obstacles for a man on foot ---------------------- */
+function groundAt(x,z,y){
+  if(MODE!=='city')return 0;
+  if(y!==undefined){var f=INT.floorAt(x,z,y);if(f!==null)return f;}
+  var P=CITY.P,E=CITY.ext;
+  if(Math.abs(x)>=E||Math.abs(z)>=E)return 0;
+  var cx=(Math.floor(x/P)+0.5)*P,cz=(Math.floor(z/P)+0.5)*P;
+  return (Math.abs(x-cx)<CITY.pad&&Math.abs(z-cz)<CITY.pad)?0.16:0;
+}
+function pushMan(bx,bz,hx,hz,R){
+  var px=(hx+R)-Math.abs(MAN.x-bx),pz=(hz+R)-Math.abs(MAN.z-bz);
+  if(px<=0||pz<=0)return;
+  if(px<pz)MAN.x=bx+(MAN.x<bx?-1:1)*(hx+R);
+  else MAN.z=bz+(MAN.z<bz?-1:1)*(hz+R);
+}
+function manCollide(){
+  var R=0.34,P=CITY.P,di,dj,list,k;
+  if(MODE==='city'){
+    var bi=Math.floor(MAN.x/P),bj=Math.floor(MAN.z/P);
+    for(di=-1;di<=1;di++)for(dj=-1;dj<=1;dj++){
+      /* CITY.solid is one box over every building on the block, which is
+         right for a car and useless for a man: it walls off the whole built
+         area, so no doorway in the city could ever be walked through. Stop
+         him at each building instead - and let him into the one whose
+         interior is currently standing, which is the one he is at. */
+      var pl=CITY.plans[(bi+di)+','+(bj+dj)];
+      if(pl)for(k=0;k<pl.length;k++){
+        var b=pl[k];
+        if(b===INT.cur)continue;
+        if(Math.abs(MAN.x-b.x)<b.hx+2&&Math.abs(MAN.z-b.z)<b.hz+2)
+          pushMan(b.x,b.z,b.hx,b.hz,R);
+      }
+      list=CITY.cars[(bi+di)+','+(bj+dj)];
+      if(!list)continue;
+      for(k=0;k<list.length;k++)
+        if(Math.abs(MAN.x-list[k].x)<6&&Math.abs(MAN.z-list[k].z)<6)
+          pushMan(list[k].x,list[k].z,list[k].hx,list[k].hz,R);
+    }
+    /* posts, trees and other people: on foot you walked through all of them */
+    for(k=0;k<CITY.posts.length;k++){
+      var o=CITY.posts[k];
+      if(Math.abs(MAN.x-o.x)>3||Math.abs(MAN.z-o.z)>3)continue;
+      pushMan(o.x,o.z,o.r*0.72,o.r*0.72,R);
+    }
+    for(k=0;k<NPC.peds.length;k++){
+      var q=NPC.peds[k];
+      if(q.idle||q.down>0||Math.abs(MAN.x-q.x)>2||Math.abs(MAN.z-q.z)>2)continue;
+      pushMan(q.x,q.z,0.26,0.26,R);
+    }
+  }
+  /* and the car he just got out of, in its own frame */
+  var sy=Math.sin(S.yaw),cy=Math.cos(S.yaw);
+  var dx=MAN.x-S.x,dz=MAN.z-S.z;
+  var lx=dx*cy-dz*sy,lz=dx*sy+dz*cy;
+  var ox=(1.02+R)-Math.abs(lx),oz=(2.28+R)-Math.abs(lz);
+  if(ox>0&&oz>0){
+    if(ox<oz)lx=(lx<0?-1:1)*(1.02+R);else lz=(lz<0?-1:1)*(2.28+R);
+    MAN.x=S.x+lx*cy+lz*sy;MAN.z=S.z-lx*sy+lz*cy;
+  }
+}
+/* how far he is from the spot he has to stand on to get back in */
+function doorDist(){
+  carPt(OUT_SPOT[0],OUT_SPOT[1],_gv);
+  return Math.hypot(MAN.x-_gv.x,MAN.z-_gv.z);
+}
+function stepMan(dt){
+  var run=input.hand>0.5?1:0;
+  MAN.run+=(run-MAN.run)*Math.min(1,dt*6);
+  var top=1.55+2.55*MAN.run;
+  var want=(input.gas>0.05?input.gas*top:0)-(input.back>0.05?input.back*1.25:0);
+  MAN.spd+=(want-MAN.spd)*Math.min(1,dt*(Math.abs(want)>Math.abs(MAN.spd)?5.5:9));
+  if(Math.abs(MAN.spd)<0.02)MAN.spd=0;
+  MAN.yaw+=input.steer*dt*(2.5-1.0*clamp(Math.abs(MAN.spd)/3.5,0,1));
+  var ox=MAN.x,oz=MAN.z;
+  MAN.x+=Math.sin(MAN.yaw)*MAN.spd*dt;
+  MAN.z+=Math.cos(MAN.yaw)*MAN.spd*dt;
+  manCollide();
+  /* the gait runs off how far he actually went, so walking into a wall
+     stops his feet instead of leaving them skating on the spot */
+  var real=(dt>1e-4)?Math.hypot(MAN.x-ox,MAN.z-oz)/dt*(MAN.spd<0?-1:1):0;
+  MAN.vis+=(real-MAN.vis)*Math.min(1,dt*10);
+  var gy=groundAt(MAN.x,MAN.z,MAN.y);
+  MAN.y+=(gy-MAN.y)*Math.min(1,dt*9);
+  MAN.head+=(clampAbs(input.steer*0.5,0.5)-MAN.head)*Math.min(1,dt*4);
+  poseWalk(MAN.x,MAN.y+STAND*DSC,MAN.z,MAN.yaw,dt);
+  var near=doorDist()<2.4;
+  if(near!==MAN.near){MAN.near=near;showPrompt(near?'F — להיכנס לרכב':'');}
+}
+
+/* ---- getting out and in ------------------------------------------ */
+function canExit(){
+  return MAN.mode==='seat'&&Math.abs(S.vx)<0.7&&Math.abs(S.vy)<0.7;
+}
+function toggleFoot(){
+  if(MAN.mode==='out'||MAN.mode==='in')return;
+  if(MAN.mode==='seat'){
+    if(!canExit()){flash('עצור קודם','F לצאת מהרכב כשהוא עומד');return;}
+    MAN.mode='out';MAN.t=0;MAN.gait=0;MAN.spd=MAN.vis=0;
+    S.vx=S.vy=S.r=0;input._g=input._b=0;
+    setCam(0);showPrompt('');
+    flash('יוצא מהרכב','');
+  }else{
+    if(doorDist()>2.4){flash('התקרב לדלת','');return;}
+    MAN.mode='in';MAN.t=0;
+    MAN.fx=MAN.x;MAN.fz=MAN.z;MAN.fyaw=MAN.yaw;
+    showPrompt('');
+  }
+  syncButtons();
+}
+function finishExit(){
+  MAN.mode='foot';
+  carPt(OUT_SPOT[0],OUT_SPOT[1],_gv);
+  MAN.x=_gv.x;MAN.z=_gv.z;MAN.y=groundAt(_gv.x,_gv.z);
+  MAN.yaw=S.yaw+PI/2;MAN.spd=MAN.vis=0;MAN.gait=0;MAN.near=true;
+  showPrompt('F — להיכנס לרכב');
+  flash('על הרגליים','W להליכה · רווח לריצה · F לחזור לרכב');
+}
+function snapIn(){
+  MAN.mode='seat';MAN.t=0;setDoor(0);showPrompt('');
+  syncButtons();
+}
+function stepDriver(dt){
+  if(!DRV)return;
+  if(MAN.mode==='seat'){poseSeated();setDoor(MAN.door*Math.max(0,1-dt*7));return;}
+  if(MAN.mode==='foot'){stepMan(dt);setDoor(0);return;}
+  MAN.t+=dt/(MAN.mode==='out'?EXIT_T:ENTER_T);
+  setDoor(doorWant());
+  if(MAN.t>=1){
+    if(MAN.mode==='out')finishExit();
+    else{MAN.mode='seat';MAN.t=0;setDoor(0);flash('בפנים','');syncButtons();}
+    return;
+  }
+  poseTransition();
+}
+function onFoot(){return MAN.mode!=='seat';}
+
+var promptEl=document.getElementById('prompt');
+function showPrompt(txt){
+  promptEl.textContent=txt||'';
+  promptEl.classList.toggle('on',!!txt);
+}
+
+/* =================================================================
+   CAR ANIMATION
+   ================================================================= */
+var wheelSpin=0,bodyRoll=0,bodyPitch=0,bodyHeave=0,wp=new T.Vector3();
+var pedG=0,pedB=0;
+function animateCar(dt){
+  carRig.position.set(S.x,0,S.z);
+  carRig.rotation.y=S.yaw;
+  bodyRoll +=((clampAbs(-S.ay,9)*0.017)-bodyRoll )*Math.min(1,dt*6);
+  bodyPitch+=((clampAbs(-S.ax,9)*0.011)-bodyPitch)*Math.min(1,dt*5);
+  var rough=S.onRoad?0:Math.sin(performance.now()*0.021)*0.014*clamp(Math.abs(S.vx)/18,0,1);
+  bodyHeave+=(rough-bodyHeave)*Math.min(1,dt*10);
+  car.rotation.z=bodyRoll;car.rotation.x=bodyPitch;car.position.y=bodyHeave;
+
+  wheelSpin+=S.vx*dt;
+  for(var i=0;i<wheels.length;i++)wheels[i].spin.rotation.x=-wheelSpin/wheels[i].r;
+  for(var j=0;j<steerables.length;j++){
+    var g=steerables[j];
+    g.rotation.y=(g.scale.x<0)?-S.steer:S.steer;
+  }
+  /* while he is out of the car the same keys walk him about, so the
+     pedals and the brake lights must stop listening to them */
+  var atWheel=!onFoot();
+  setBrakeLights(atWheel&&(S.brake>0.05||(input.back&&S.vx>0.6)));
+  setReverse(atWheel&&S.vx<-0.3);
+
+  /* the cabin: the wheel follows the front axle, the pedals follow your feet */
+  if(IT){
+    if(IT.wheel)IT.wheel.rotation.z=-S.steer*5.6;
+    pedG+=((atWheel?clamp(input.gas,0,1):0)-pedG)*Math.min(1,dt*12);
+    pedB+=(((atWheel&&(S.brake>0.05||input.hand))?1:0)-pedB)*Math.min(1,dt*14);
+    if(IT.gas)IT.gas.rotation.x=-0.34+pedG*0.20;
+    if(IT.brake)IT.brake.rotation.x=-0.34+pedB*0.22;
+    if(IT.shift)IT.shift.rotation.x=clampAbs(-S.ax,9)*0.018;
+  
+  }
+
+  var slipping=S.slide>0.55||(input.hand&&Math.abs(S.vx)>3);
+  var offroad=!S.onRoad&&Math.abs(S.vx)>3;
+  for(i=0;i<wheels.length;i++){
+    var W=wheels[i],key='w'+i;
+    W.g.getWorldPosition(wp);
+    var rear=W.g.position.z<0;
+    if((slipping&&rear)||offroad){
+      var dx=Math.sin(S.yaw),dz=Math.cos(S.yaw);
+      if(S.onRoad)SKID.add(key,wp.x,wp.z,dx,dz,0.145,clamp(slipping?S.slide*0.5:0.3,0,1));
+      if(Math.random()<0.5)
+        DUST.spawn(wp.x,0.16,wp.z,-dx*Math.abs(S.vx),-dz*Math.abs(S.vx),S.onRoad?0.5:0.9);
+    }else SKID.lift(key);
+  }
+  if(offroad&&Math.abs(S.vx)>8)camShake=Math.min(0.075,Math.abs(S.vx)*0.0015);
+}
+function moveSun(){
+  /* the shadow box follows whoever the camera is on, so he keeps his
+     shadow when he walks away from the car */
+  var fx=onFoot()?MAN.x:S.x,fz=onFoot()?MAN.z:S.z;
+  sun.position.set(fx-60,90,fz-40);
+  sun.target.position.set(fx,0,fz);
+  sun.target.updateMatrixWorld();
+}
+
+/* =================================================================
+   LOOP
+   ================================================================= */
+addEventListener('resize',function(){
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight,false);
+});
+var clock=new T.Clock(),acc=0,mapTick=0,fpsN=0,fpsT=0,fpsEl=document.getElementById('fps');
+var cockT=0,navT=0;
+function frame(){
+  requestAnimationFrame(frame);
+  var dt=Math.min(clock.getDelta(),0.05);
+  pollPad();
+  input.steer=clamp((input._l-input._r)+input.padSteer,-1,1);
+  input.gas=Math.max(input._g,input.padGas);
+  input.back=Math.max(input._b,input.padBack);
+  input.hand=Math.max(input._h,input.padHand);
+  acc+=dt;
+  var n=0,inCity=(MODE==='city'),walking=onFoot();
+  if(walking){acc=0;S.throttle=S.brake=0;}
+  if(AUTO.on){
+    if(inCity&&!walking)autoDrive(dt);
+    else toggleAuto(false);          /* no lane grid out there, and none on foot */
+  }
+  while(acc>=1/120&&n<10){
+    if(inCity){cityProbe();stepVehicle(1/120);cityCollide();}
+    else{trackProbe();stepVehicle(1/120);}
+    hillCollide();
+    acc-=1/120;n++;
+  }
+  if(inCity){stepSignals(dt);NPC.step(dt);INT.step(dt);stepDoor(dt);}
+  stepDamage(dt);
+  if(!walking){if(inCity)freeLogic(dt);else lapLogic(dt);}
+  animateCar(dt);
+  stepDriver(dt);
+  DUST.step(dt);
+  updateCamera(dt);
+  moveSun();
+  skyDome.position.set(camera.position.x,0,camera.position.z);
+  STARS.position.set(camera.position.x,0,camera.position.z);
+  updateHUD(dt);
+  updateAudio();
+  mapTick+=dt;if(mapTick>0.06){mapTick=0;drawMap();if(inCity)drawMood();drawDamage();}
+  if(state.cam===1||state.cam===2){          /* only worth painting from inside */
+    cockT+=dt;if(cockT>0.05){cockT=0;drawCluster();}
+    navT+=dt;if(navT>0.30){navT=0;drawNav();}
+  }
+  fpsN++;fpsT+=dt;
+  if(fpsT>0.5){fpsEl.textContent=Math.round(fpsN/fpsT)+' FPS';fpsN=0;fpsT=0;}
+  renderer.render(scene,camera);
+}
+
+/* =================================================================
+   BOOT — staged, so the loader keeps painting between heavy steps
+   ================================================================= */
+var STEPS=[
+  ['מתווה את המסלול…',function(){buildTrack();buildMap();}],
+  ['מרצף אספלט…',buildRoad],
+  ['שותל עצים ופנסים…',function(){buildProps();buildGantry();buildHills();}],
+  ['בונה את העיר…',buildCity],
+  ['מרכיב את הרכב…',function(){
+    var b=A.build();
+    car=b.car;wheels=b.wheels;steerables=b.steerables;IT=b.interior||null;
+    DOORS=b.doors||null;
+    addDriver();
+    if(IT){
+      if(IT.cluster){IT.cluster.material=CLS.mat;IT.cluster.rotation.y=PI;}
+      if(IT.centre){IT.centre.material=NAV.mat;IT.centre.rotation.y=PI;}
+    }
+    carRig=new T.Group();carRig.add(car);carRig.add(cabin);scene.add(carRig);
+  }],
+  ['מדליק אורות…',function(){
+    setLights(false);setReverse(false);applyEnv();
+    setWorld('city');
+    drawCluster();drawNav();
+  }]
+];
+function nextStep(){
+  var s=STEPS.shift();
+  if(!s){
+    document.getElementById('loader').className='gone';
+    window.__SIM={ready:true,S:S,state:state,scene:scene,camera:camera,renderer:renderer,
+      TRACK:TRACK,input:input,car:car,carRig:carRig,setCam:setCam,placeOnTrack:placeOnTrack,
+      toggleNight:toggleNight,toggleLights:toggleLights,stepVehicle:stepVehicle,
+      trackProbe:trackProbe,animateCar:animateCar,
+      CITY:CITY,setWorld:setWorld,cityProbe:cityProbe,cityCollide:cityCollide,IT:IT,DRV:DRV,
+      MAN:MAN,PRIG:PRIG,DOORS:DOORS,toggleFoot:toggleFoot,onFoot:onFoot,groundAt:groundAt,
+      stepDriver:stepDriver,updateCamera:updateCamera,
+      CLS:CLS,NAV:NAV,
+      cityRoadDist:cityRoadDist,resetCar:resetCar,
+      mode:function(){return MODE;},assist:function(v){ASSIST=v;}};
+    setTimeout(function(){if(!input.gas)flash('W / ↑ להאיץ','T להחלפת עולם · H לעזרה');},700);
+    frame();
+    return;
+  }
+  lmsg.textContent=s[0];
+  requestAnimationFrame(function(){setTimeout(function(){
+    try{s[1]();}catch(err){
+      fatal('שגיאה בבנייה:<br><b>'+err.message+'</b><br><small>'+(err.stack||'').split('\n')[1]+'</small>');
+      throw err;
+    }
+    nextStep();
+  },18);});
+}
+requestAnimationFrame(function(){setTimeout(nextStep,20);});
+})();
+</script>
+</body>
+</html>

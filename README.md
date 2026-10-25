@@ -1,36 +1,41 @@
 # car-3d
 
-**AVIR GT-S** is a detailed sports car model built entirely in code, plus a driving simulator that uses it. Every surface is computed procedurally on top of [three.js](https://threejs.org/) r147, with no external model files.
+**AVIR GT-S** — מודל רכב ספורט מפורט שנבנה כולו בקוד, וסימולטור נהיגה שבנוי עליו. כל משטח מחושב
+פרוצדורלית על גבי [three.js](https://threejs.org/) r147, בלי קבצי מודל חיצוניים.
 
-## What's inside
+## מה יש כאן
 
-- **Studio** (`car-3d/index.html`): view the car, change paint and lights, switch cameras, open the doors and see the driver.
-- **Driving sim** (`car-3d/drive.html`):
-  - A free-roam city with traffic, motorbikes, pedestrians and traffic lights.
-  - Buildings you can walk into, and your own house with a garage.
-  - A closed race track with lap timing.
-  - Physics, an autopilot (`G`), day and night, synthesized engine sound, and gamepad support.
-  - The driver can open the door, get out, walk around and get back in (`F`).
+- **הסטודיו** (`car-3d/index.html`): צפייה ברכב, צבעים ואורות, מצלמות, פתיחת הדלתות והנהג.
+- **סימולטור הנהיגה** (`car-3d/drive.html`):
+  - עיר לנסיעה חופשית עם תנועה, אופנועים, הולכי רגל ורמזורים.
+  - בניינים שאפשר להיכנס אליהם, ובית משלך עם גראז׳.
+  - מסלול מרוצים סגור עם מדידת הקפות.
+  - פיזיקה, טייס אוטומטי (`G`), יום ולילה, סאונד מנוע מסונתז ותמיכה בשלט משחק.
+  - הנהג יכול לפתוח את הדלת, לצאת, להסתובב ברגל ולחזור לרכב (`F`).
 
-## Run it
+## הרצה
 
-Open `car-3d/index.html` or `car-3d/drive.html` directly in a browser. Everything works offline because three.js is vendored.
+פותחים את `car-3d/index.html` או את `car-3d/drive.html` ישירות בדפדפן. הכול עובד גם בלי אינטרנט,
+כי three.js נמצא בתיקייה.
 
-Or start the local server:
+או עם השרת המקומי:
 
 ```sh
 cd car-3d
 python3 serve.py        # http://localhost:8778/index.html
 ```
 
-To share it, use `car-3d/standalone.html` and `car-3d/drive-standalone.html`. Each is a single self-contained file. After editing `car-model.js` (or either page), rebuild them:
+לשיתוף יש את `car-3d/standalone.html` ואת `car-3d/drive-standalone.html` — כל אחד קובץ בודד שמכיל
+הכול. אחרי שינוי ב־`car-model.js` (או באחד הדפים) צריך לבנות אותם מחדש:
 
 ```sh
 node build-standalone.mjs
 ```
 
-## Controls (driving)
+## שליטה (נהיגה)
 
-`W`/`S` throttle and brake · `A`/`D` steer · `Space` handbrake · `G` autopilot · `F` exit/enter car · `T` city/track · `E` driving aids · `C` or `1`–`4` camera · `L` lights · `N` night · `M` sound · `R` reset · `Q` graphics quality · `H` help
+`W`/`S` גז ובלם · `A`/`D` היגוי · `רווח` בלם יד · `G` טייס אוטומטי · `F` יציאה מהרכב / חזרה אליו ·
+`T` עיר / מסלול · `E` עזרי נהיגה · `C` או `1`–`4` מצלמה · `L` אורות · `N` לילה · `M` סאונד ·
+`R` חזרה לכביש · `Q` איכות גרפיקה · `H` עזרה
 
-See [`car-3d/README.md`](car-3d/README.md) for the full design notes (in Hebrew).
+הסבר מלא על המודל, העיר והפיזיקה נמצא ב־[`car-3d/README.md`](car-3d/README.md).
